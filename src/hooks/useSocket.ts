@@ -5,7 +5,7 @@ export default function useSocket() {
   useEffect(() => {
     if (!socketCreated.current) {
       const socketInitializer = async () => {
-        await fetch("http://127.0.0.1:8000/api/socket");
+        await fetch(`${process.env.NEXT_PUBLIC_WS_HOST}/api/socket`);
       };
       try {
         socketInitializer();

@@ -6,7 +6,10 @@ export default function SocketHandler(req, res) {
     return res.end();
   }
 
-  const io = new Server(res.socket.server);
+  const io = new Server(res.socket.server, {
+    path: "/api/socket/",
+    cors: { origin: "*" },
+  });
   res.socket.server.io = io;
 
   io.on("connection", (socket) => {

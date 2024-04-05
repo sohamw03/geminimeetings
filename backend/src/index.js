@@ -1,7 +1,10 @@
 import express from "express";
 import SocketHandler from "./SocketHandler.js";
+import cors from "cors";
 
 const app = express();
+
+app.use(cors()); // Enable CORS for all origins
 
 app.get("/api/socket", SocketHandler);
 
