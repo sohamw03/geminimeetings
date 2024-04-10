@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { Socket, io } from "socket.io-client";
 
-export default function Room({ roomName }: { roomName: string }) {
+export default function Room({ params }: { params: { roomname: string } }) {
+  const { roomname } = params;
   const router = useRouter();
 
   useSocket();
@@ -17,14 +18,14 @@ export default function Room({ roomName }: { roomName: string }) {
   const userStreamRef = useRef<MediaStream>();
   const hostRef = useRef<boolean>(false);
 
-  const id = roomName;
+  const id = roomname;
   useEffect(() => {
     socketRef.current = io(`${process.env.NEXT_PUBLIC_WS_HOST}`, {
       path: "/api/socket/",
     });
 
     // First when we join the room
-    socketRef.current.emit("join", roomName);
+    socketRef.current.emit("join", roomname);
 
     socketRef.current.on("created", handleRoomCreated);
 
@@ -50,7 +51,7 @@ export default function Room({ roomName }: { roomName: string }) {
     return () => {
       socketRef.current?.disconnect();
     };
-  }, [roomName]);
+  }, [roomname]);
 
   const handleRoomCreated = () => {
     hostRef.current = true;
@@ -86,7 +87,7 @@ export default function Room({ roomName }: { roomName: string }) {
             userVideoRef.current?.play();
           };
         }
-        socketRef.current?.emit("ready", roomName);
+        socketRef.current?.emit("ready", roomname);
       })
       .catch((err) => console.error(err));
   };
@@ -107,7 +108,7 @@ export default function Room({ roomName }: { roomName: string }) {
         ?.createOffer()
         .then((offer) => {
           rtcConnectionRef.current?.setLocalDescription(offer);
-          socketRef.current?.emit("offer", offer, roomName);
+          socketRef.current?.emit("offer", offer, roomname);
         })
         .catch((err) => console.error(err));
     }
@@ -146,7 +147,7 @@ export default function Room({ roomName }: { roomName: string }) {
         .createAnswer()
         .then((answer) => {
           rtcConnectionRef.current?.setLocalDescription(answer);
-          socketRef.current?.emit("answer", answer, roomName);
+          socketRef.current?.emit("answer", answer, roomname);
         })
         .catch((error) => {
           console.log(error);
@@ -163,7 +164,7 @@ export default function Room({ roomName }: { roomName: string }) {
 
   const handleICECandidateEvent = (event: RTCPeerConnectionIceEvent) => {
     if (event.candidate) {
-      socketRef.current?.emit("ice-candidate", event.candidate, roomName);
+      socketRef.current?.emit("ice-candidate", event.candidate, roomname);
     }
   };
 
@@ -178,7 +179,7 @@ export default function Room({ roomName }: { roomName: string }) {
   };
 
   const leaveRoom = () => {
-    socketRef.current?.emit("leave", roomName);
+    socketRef.current?.emit("leave", roomname);
 
     if (userVideoRef.current?.srcObject) {
       (userVideoRef.current.srcObject as MediaStream).getTracks().forEach((track: MediaStreamTrack) => track.stop()); // Stops receiving all track of User.
