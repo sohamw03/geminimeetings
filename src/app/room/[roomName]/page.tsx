@@ -1,224 +1,37 @@
 "use client";
 
-import useSocket from "@/hooks/useSocket";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
-import { Socket, io } from "socket.io-client";
+import BottomControls from "@/components/BottomControls";
+import VideoCard from "@/components/VideoCard";
+import { Values, useGlobal } from "@/globalContext/GlobalContext";
+import { Box, SxProps } from "@mui/material";
+import { LegacyRef, useEffect } from "react";
 
 export default function Room({ params }: { params: { roomname: string } }) {
   const { roomname } = params;
-  const router = useRouter();
 
-  useSocket();
+  // Global Context
+  const { peerVideoRef, setRoomName }: Values = useGlobal();
 
-  const userVideoRef = useRef<HTMLVideoElement | undefined | null | any>();
-  const peerVideoRef = useRef<HTMLVideoElement | undefined | null | any>();
-  const rtcConnectionRef = useRef<RTCPeerConnection | null>();
-  const socketRef = useRef<Socket>();
-  const userStreamRef = useRef<MediaStream>();
-  const hostRef = useRef<boolean>(false);
-
-  const id = roomname;
   useEffect(() => {
-    socketRef.current = io(`${process.env.NEXT_PUBLIC_WS_HOST}`, {
-      path: "/api/socket/",
-    });
-
-    // First when we join the room
-    socketRef.current.emit("join", roomname);
-
-    socketRef.current.on("created", handleRoomCreated);
-
-    socketRef.current.on("joined", handleRoomJoined);
-    // If the room didn't exist, the server would emit the room was 'created'
-
-    // Whenever the next person joins, the server emits 'ready'
-    socketRef.current.on("ready", initiateCall);
-
-    // Emitted when a peer leaves the room
-    socketRef.current.on("leave", onPeerLeave);
-
-    // If the room is full, we show an alert
-    socketRef.current.on("full", () => {
-      window.location.href = "/";
-    });
-
-    // Events that are webRTC speccific
-    socketRef.current.on("offer", handleReceivedOffer);
-    socketRef.current.on("answer", handleAnswer);
-    socketRef.current.on("ice-candidate", handlerNewIceCandidateMsg);
-
-    return () => {
-      socketRef.current?.disconnect();
-    };
-  }, [roomname]);
-
-  const handleRoomCreated = () => {
-    hostRef.current = true;
-    navigator.mediaDevices
-      .getUserMedia({
-        audio: true,
-        video: { width: 500, height: 500 },
-      })
-      .then((stream) => {
-        // Use the stream
-        userStreamRef.current = stream;
-        if (userVideoRef.current) {
-          userVideoRef.current.srcObject = stream as MediaStream;
-          userVideoRef.current.onloadedmetadata = () => {
-            userVideoRef.current?.play();
-          };
-        }
-      })
-      .catch((err) => console.error(err));
-  };
-
-  const handleRoomJoined = () => {
-    navigator.mediaDevices
-      .getUserMedia({
-        audio: true,
-        video: { width: 500, height: 500 },
-      })
-      .then((stream) => {
-        userStreamRef.current = stream;
-        if (userVideoRef.current) {
-          userVideoRef.current.srcObject = stream as MediaStream;
-          userVideoRef.current.onloadedmetadata = () => {
-            userVideoRef.current?.play();
-          };
-        }
-        socketRef.current?.emit("ready", roomname);
-      })
-      .catch((err) => console.error(err));
-  };
-
-  const initiateCall = () => {
-    if (hostRef.current) {
-      rtcConnectionRef.current = createPeerConnection();
-      if (userStreamRef.current) {
-        rtcConnectionRef.current?.addTrack(
-          //
-          userStreamRef.current?.getTracks()[0],
-          userStreamRef.current
-        );
-
-        rtcConnectionRef.current?.addTrack(userStreamRef.current?.getTracks()[1], userStreamRef.current);
-      }
-      rtcConnectionRef.current
-        ?.createOffer()
-        .then((offer) => {
-          rtcConnectionRef.current?.setLocalDescription(offer);
-          socketRef.current?.emit("offer", offer, roomname);
-        })
-        .catch((err) => console.error(err));
-    }
-  };
-
-  const ICE_SERVERS = {
-    iceServers: [
-      {
-        urls: "stun:openrelay.metered.ca:80",
-      },
-    ],
-  };
-
-  const createPeerConnection = () => {
-    // We create a new RTCPeerConnection
-    const connection = new RTCPeerConnection(ICE_SERVERS);
-
-    // We implement our onicecandidate method for when we received a ICE candidate from stun server
-    connection.onicecandidate = handleICECandidateEvent;
-
-    // We implement our onTrack method for when we receive tracks
-    connection.ontrack = handleTrackEvent;
-    return connection;
-  };
-
-  const handleReceivedOffer = (offer: RTCSessionDescriptionInit) => {
-    if (!hostRef.current) {
-      rtcConnectionRef.current = createPeerConnection();
-      if (userStreamRef.current) {
-        rtcConnectionRef.current.addTrack(userStreamRef.current.getTracks()[0], userStreamRef.current);
-        rtcConnectionRef.current.addTrack(userStreamRef.current.getTracks()[1], userStreamRef.current);
-      }
-      rtcConnectionRef.current.setRemoteDescription(offer);
-
-      rtcConnectionRef.current
-        .createAnswer()
-        .then((answer) => {
-          rtcConnectionRef.current?.setLocalDescription(answer);
-          socketRef.current?.emit("answer", answer, roomname);
-        })
-        .catch((error) => {
-          console.log(error);
-        });
-    }
-  };
-
-  const handleAnswer = (answer: RTCSessionDescriptionInit) => {
-    if (rtcConnectionRef.current)
-      rtcConnectionRef.current //
-        .setRemoteDescription(answer)
-        .catch((err) => console.log(err));
-  };
-
-  const handleICECandidateEvent = (event: RTCPeerConnectionIceEvent) => {
-    if (event.candidate) {
-      socketRef.current?.emit("ice-candidate", event.candidate, roomname);
-    }
-  };
-
-  const handlerNewIceCandidateMsg = (incoming: RTCIceCandidateInit) => {
-    // We cast the incoming candidate to RTCIceCandidate
-    const candidate = new RTCIceCandidate(incoming);
-    rtcConnectionRef.current?.addIceCandidate(candidate).catch((e) => console.log(e));
-  };
-
-  const handleTrackEvent = (event: RTCTrackEvent) => {
-    if (peerVideoRef.current) peerVideoRef.current.srcObject = event.streams[0] as MediaStream;
-  };
-
-  const leaveRoom = () => {
-    socketRef.current?.emit("leave", roomname);
-
-    if (userVideoRef.current?.srcObject) {
-      (userVideoRef.current.srcObject as MediaStream).getTracks().forEach((track: MediaStreamTrack) => track.stop()); // Stops receiving all track of User.
-    }
-    if (peerVideoRef.current?.srcObject) {
-      (peerVideoRef.current.srcObject as MediaStream).getTracks().forEach((track: MediaStreamTrack) => track.stop()); // Stops receiving audio track of Peer.
-    }
-
-    // Checks if there is peer on the other side and safely closes the existing connection established with the peer.
-    if (rtcConnectionRef.current) {
-      rtcConnectionRef.current.ontrack = null;
-      rtcConnectionRef.current.onicecandidate = null;
-      rtcConnectionRef.current.close();
-      rtcConnectionRef.current = null;
-    }
-    router.push("/");
-  };
-
-  const onPeerLeave = () => {
-    // This person is now the creator because they are the only person in the room.
-    hostRef.current = true;
-    if (peerVideoRef.current?.srcObject) {
-      (peerVideoRef.current.srcObject as MediaStream).getTracks().forEach((track) => track.stop()); // Stops receiving all track of Peer.
-    }
-
-    // Safely closes the existing connection established with the peer who left.
-    if (rtcConnectionRef.current) {
-      rtcConnectionRef.current.ontrack = null;
-      rtcConnectionRef.current.onicecandidate = null;
-      rtcConnectionRef.current.close();
-      rtcConnectionRef.current = null;
-    }
-  };
+    setRoomName((p) => roomname);
+  }, []);
 
   return (
-    <div>
-      <video autoPlay ref={userVideoRef} />
-      <video autoPlay ref={peerVideoRef} />
-      <button onClick={leaveRoom}>Leave Room</button>
-    </div>
+    <Box sx={styles.main}>
+      <VideoCard mode="user" />
+      <VideoCard mode="peer" />
+      <BottomControls />
+    </Box>
   );
 }
+
+const styles: { [key: string]: SxProps } = {
+  main: {
+    width: "100%",
+    height: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "start",
+    alignItems: "center",
+  },
+};

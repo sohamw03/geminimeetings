@@ -1,12 +1,12 @@
 "use client";
-import { Roboto } from "next/font/google";
+import { IBM_Plex_Sans } from "next/font/google";
 import { createTheme } from "@mui/material/styles";
 import { grey } from "@mui/material/colors";
 
-const roboto = Roboto({
-  weight: ["300", "400", "500", "700"],
-  subsets: ["latin"],
-  display: "swap",
+const ibm_plex_sans = IBM_Plex_Sans({
+  //
+  subsets: ["cyrillic"],
+  weight: ["100", "200", "300", "400", "500", "600", "700"],
 });
 
 const theme = createTheme({
@@ -17,7 +17,7 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: roboto.style.fontFamily,
+    fontFamily: ibm_plex_sans.style.fontFamily,
   },
   components: {
     MuiAlert: {

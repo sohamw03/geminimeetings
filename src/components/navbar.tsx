@@ -52,7 +52,7 @@ export default function Navbar() {
   }, []);
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
+    <Box sx={{ flexGrow: 1, position: "fixed", top: 0, left: 0, right: 0 }}>
       <AppBar position="static">
         <Toolbar>
           <IconButton size="large" edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
@@ -62,7 +62,7 @@ export default function Navbar() {
             <Link href={"/"}>GeminiMeetings</Link>
           </Typography>
           <Box sx={{ flexGrow: 0, display: "flex", alignItems: "center" }}>
-            <Typography variant="subtitle1" component="div" sx={{ flexGrow: 1, px: 4, lineHeight: 1 }}>
+            <Typography variant="subtitle1" component="div" sx={{ flexGrow: 1, px: 2, lineHeight: 1 }}>
               {dateDisplay}
             </Typography>
 

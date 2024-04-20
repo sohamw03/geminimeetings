@@ -1,5 +1,6 @@
 "use client";
 
+import Navbar from "@/components/Navbar";
 import { Box, Button, Card, TextField, Typography } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -14,12 +15,13 @@ export default function Home() {
 
   return (
     <Card className="flex flex-col h-screen pt-[10vh]">
-      <Box component={"main"} maxWidth={"sm"} sx={{ margin: "4rem auto" }}>
+      <Navbar />
+      <Box component={"main"} maxWidth={"sm"} sx={{ margin: "calc(15vh) auto" }}>
         <Typography variant="h2" component={"h1"} sx={{ textAlign: "center", userSelect: "none", fontWeight: "bold" }}>
           Welcome to GeminiMeetings
         </Typography>
         <Box component={"div"} sx={{ display: "flex", margin: "2rem auto", gap: "1rem", justifyContent: "center" }}>
-          <TextField onChange={(e) => setRoomName(e.target.value)} value={roomName} label="Enter a code to generate or join" variant="outlined" />
+          <TextField onChange={(e) => setRoomName(e.target.value)} value={roomName} label="Enter a code to generate or join" variant="outlined" sx={{ width: "30rem", marginLeft: "6rem" }} />
           <Button variant="text" onClick={joinRoom} size="large" sx={{ width: "6rem" }}>
             Join
           </Button>
