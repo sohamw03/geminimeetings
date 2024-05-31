@@ -10,12 +10,11 @@ import { Box, Button, Modal } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ShieldIcon from "@mui/icons-material/Shield";
 import { useState } from "react";
+import Settings from "./Settings";
 
 export default function BottomControls() {
   // Global Context
   const { leaveRoom, toggleAudioMute, toggleVideoMute, isAudioMuted, isVideoMuted }: Values = useGlobal();
-  // Local State
-  const [open, setOpen] = useState(false);
 
   return (
     <Box
@@ -82,27 +81,7 @@ export default function BottomControls() {
       </Box>
       {/* Settings (Right) */}
       <Box>
-        <Button
-          sx={{
-            p: 2,
-            mr: 3.5,
-            borderRadius: "100%",
-          }}
-          className="border-2 border-gray-700 border-solid"
-          onClick={() => {
-            setOpen(true);
-          }}>
-          <SettingsIcon fontSize="large" />
-        </Button>
-        <Modal
-          open={open}
-          onClose={() => {
-            setOpen(false);
-          }}
-          aria-labelledby="modal-modal-title"
-          aria-describedby="modal-modal-description">
-          <Box>Text in a modal Duis mollis, est non commodo luctus, nisi erat porttitor ligula.</Box>
-        </Modal>
+        <Settings />
       </Box>
     </Box>
   );

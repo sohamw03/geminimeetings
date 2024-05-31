@@ -13,6 +13,8 @@ export interface Values {
   toggleVideoMute: () => void;
   isAudioMuted: boolean;
   isVideoMuted: boolean;
+  open: boolean;
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const globalContext = createContext<Values>({} as Values);
@@ -22,6 +24,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const [roomName, setRoomName] = useState<string>("");
   const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
   const [isVideoMuted, setIsVideoMuted] = useState<boolean>(false);
+  const [open, setOpen] = useState(true);
 
   const router = useRouter();
 
@@ -91,8 +94,14 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     hostRef.current = true;
     navigator.mediaDevices
       .getUserMedia({
-        audio: true,
-        video: { width: 1920, height: 1080 },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+        video: {
+          width: 1920,
+          height: 1080,
+        },
       })
       .then((stream) => {
         // Use the stream
@@ -115,7 +124,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const handleRoomJoined = () => {
     navigator.mediaDevices
       .getUserMedia({
-        audio: true,
+        audio: { echoCancellation: true, noiseSuppression: true },
         video: { width: 1920, height: 1080 },
       })
       .then((stream) => {
@@ -257,6 +266,8 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     toggleVideoMute,
     isAudioMuted,
     isVideoMuted,
+    open,
+    setOpen,
   };
 
   return <globalContext.Provider value={values}>{children}</globalContext.Provider>;

@@ -1,6 +1,6 @@
 "use client";
 
-import BottomControls from "@/components/BottomControls";
+import BottomControls from "@/components/BottomControls/BottomControls";
 import VideoCard from "@/components/VideoCard";
 import { Values, useGlobal } from "@/globalContext/GlobalContext";
 import { Box, SxProps } from "@mui/material";
