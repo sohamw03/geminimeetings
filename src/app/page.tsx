@@ -10,7 +10,7 @@ export default function Home() {
   const [roomName, setRoomName] = useState("");
 
   const joinRoom = () => {
-    router.push(`/room/${roomName || Math.random().toString(36).slice(2)}`);
+    window.location.assign(`/room/${roomName || Math.random().toString(36).slice(2)}`);
   };
 
   return (

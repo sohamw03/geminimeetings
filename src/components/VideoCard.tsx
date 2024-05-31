@@ -16,7 +16,7 @@ export default function VideoCard({ mode }: { mode: "user" | "peer" }) {
     case "peer":
       return (
         <>
-          <Paper elevation={1} className="mb-32 rounded-xl cursor-pointer w-full h-full flex">
+          <Paper elevation={1} className="mb-32 rounded-xl cursor-pointer w-full h-full flex justify-center">
             <video autoPlay ref={peerVideoRef as LegacyRef<HTMLVideoElement>} className="aspect-video rounded-xl" />
           </Paper>
         </>

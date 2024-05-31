@@ -34,8 +34,6 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const userStreamRef = useRef<MediaStream>();
   const hostRef = useRef<boolean>(false);
 
-  const id = roomName;
-
   const toggleAudioMute = () => {
     if (userStreamRef.current) {
       userStreamRef.current.getAudioTracks().forEach((track) => {
@@ -132,12 +130,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     if (hostRef.current) {
       rtcConnectionRef.current = createPeerConnection();
       if (userStreamRef.current) {
-        rtcConnectionRef.current?.addTrack(
-          //
-          userStreamRef.current?.getTracks()[0],
-          userStreamRef.current
-        );
-
+        rtcConnectionRef.current?.addTrack(userStreamRef.current?.getTracks()[0], userStreamRef.current);
         rtcConnectionRef.current?.addTrack(userStreamRef.current?.getTracks()[1], userStreamRef.current);
       }
       rtcConnectionRef.current
@@ -231,7 +224,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
       rtcConnectionRef.current.close();
       rtcConnectionRef.current = null;
     }
-    router.push("/");
+    window.location.assign("/");
   };
 
   const onPeerLeave = () => {
