@@ -96,9 +96,14 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
       })
       .then((stream) => {
         // Use the stream
+        const audioTracks = stream.getAudioTracks();
+
+        // Create a new MediaStream without audio
+        const newStream = new MediaStream(stream.getVideoTracks());
+
         userStreamRef.current = stream;
         if (userVideoRef.current) {
-          userVideoRef.current.srcObject = stream as MediaStream;
+          userVideoRef.current.srcObject = newStream as MediaStream;
           userVideoRef.current.onloadedmetadata = () => {
             userVideoRef.current?.play();
           };

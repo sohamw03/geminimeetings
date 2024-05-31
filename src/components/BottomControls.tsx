@@ -6,19 +6,22 @@ import CallEndIcon from "@mui/icons-material/CallEnd";
 import MicIcon from "@mui/icons-material/Mic";
 import MicOffIcon from "@mui/icons-material/MicOff";
 import VideocamIcon from "@mui/icons-material/Videocam";
-import { Box, Button } from "@mui/material";
+import { Box, Button, Modal } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ShieldIcon from "@mui/icons-material/Shield";
+import { useState } from "react";
 
 export default function BottomControls() {
   // Global Context
   const { leaveRoom, toggleAudioMute, toggleVideoMute, isAudioMuted, isVideoMuted }: Values = useGlobal();
+  // Local State
+  const [open, setOpen] = useState(false);
 
   return (
     <Box
       sx={{
         position: "fixed",
-        bottom: "2rem",
+        bottom: "1.6rem",
         left: "50%",
         transform: "translateX(-50%)",
         gap: "1rem",
@@ -85,9 +88,21 @@ export default function BottomControls() {
             mr: 3.5,
             borderRadius: "100%",
           }}
-          className="border-2 border-gray-700 border-solid">
+          className="border-2 border-gray-700 border-solid"
+          onClick={() => {
+            setOpen(true);
+          }}>
           <SettingsIcon fontSize="large" />
         </Button>
+        <Modal
+          open={open}
+          onClose={() => {
+            setOpen(false);
+          }}
+          aria-labelledby="modal-modal-title"
+          aria-describedby="modal-modal-description">
+          <Box>Text in a modal Duis mollis, est non commodo luctus, nisi erat porttitor ligula.</Box>
+        </Modal>
       </Box>
     </Box>
   );
