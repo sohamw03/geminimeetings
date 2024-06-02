@@ -1,11 +1,19 @@
 import { Values, useGlobal } from "@/globalContext/GlobalContext";
+import CloseIcon from "@mui/icons-material/Close";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { Box, Button, Modal, Paper, Stack, Typography, styled } from "@mui/material";
 import Grid from "@mui/material/Unstable_Grid2/Grid2";
+import { useState } from "react";
 
 export default function Settings() {
   // Global Context
   const { open, setOpen }: Values = useGlobal();
+  // Local State
+  const [value, setValue] = useState(0);
+
+  const handleChange = (newValue: number) => {
+    setValue(newValue);
+  };
 
   const Item = styled(Button)(({ theme }) => ({
     backgroundColor: "#323232",
@@ -80,14 +88,69 @@ export default function Settings() {
                   }}>
                   Settings
                 </Typography>
-                <Item>Audio</Item>
-                <Item>Video</Item>
+                <Item
+                  onClick={() => {
+                    handleChange(0);
+                  }}
+                  className="transition-all"
+                  sx={{
+                    backgroundColor: value === 0 ? "#323232" : "transparent",
+                  }}>
+                  Audio
+                </Item>
+                <Item
+                  onClick={() => {
+                    handleChange(1);
+                  }}
+                  className="transition-all"
+                  sx={{
+                    backgroundColor: value === 1 ? "#323232" : "transparent",
+                  }}>
+                  Video
+                </Item>
               </Stack>
             </Grid>
-            <Box>Box Content</Box>
+            <Box
+              sx={{
+                display: "flex",
+                flex: 1,
+                flexDirection: "column",
+              }}>
+              <div className="w-full flex flex-row justify-end h-16">
+                <Button
+                  sx={{
+                    borderRadius: "100rem",
+                  }}
+                  onClick={() => {
+                    setOpen(false);
+                  }}
+                  size="small"
+                  variant="text">
+                  <CloseIcon fontSize="small" />
+                </Button>
+              </div>
+              {/* Audio Panel */}
+              <TabPanel value={value} index={0} handleChange={handleChange}>
+                Audio Settings
+              </TabPanel>
+              {/* Video Panel */}
+              <TabPanel value={value} index={1} handleChange={handleChange}>
+                Video Settings
+              </TabPanel>
+            </Box>
           </Grid>
         </Paper>
       </Modal>
     </>
   );
 }
+
+const TabPanel = (props: any) => {
+  const { children, value, index, handleChange, ...other } = props;
+
+  return (
+    <div role="tabpanel" hidden={value !== index} id={`simple-tabpanel-${index}`} aria-labelledby={`simple-tab-${index}`} {...other}>
+      {value === index && <Box>{children}</Box>}
+    </div>
+  );
+};

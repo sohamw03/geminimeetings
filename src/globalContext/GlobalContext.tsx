@@ -24,7 +24,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const [roomName, setRoomName] = useState<string>("");
   const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
   const [isVideoMuted, setIsVideoMuted] = useState<boolean>(false);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   const router = useRouter();
 
@@ -94,16 +94,15 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     hostRef.current = true;
     navigator.mediaDevices
       .getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
-        video: {
-          width: 1920,
-          height: 1080,
-        },
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: { width: 1280, height: 720, frameRate: 30 },
       })
       .then((stream) => {
+        stream.getTracks().forEach((t) => {
+          t.stop();
+          stream.removeTrack(t);
+        });
+
         // Use the stream
         const audioTracks = stream.getAudioTracks();
 
@@ -124,13 +123,24 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const handleRoomJoined = () => {
     navigator.mediaDevices
       .getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true },
-        video: { width: 1920, height: 1080 },
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: { width: 1280, height: 720, frameRate: 30 },
       })
       .then((stream) => {
+        stream.getTracks().forEach((t) => {
+          t.stop();
+          stream.removeTrack(t);
+        });
+
+        // Use the stream
+        const audioTracks = stream.getAudioTracks();
+
+        // Create a new MediaStream without audio
+        const newStream = new MediaStream(stream.getVideoTracks());
+
         userStreamRef.current = stream;
         if (userVideoRef.current) {
-          userVideoRef.current.srcObject = stream as MediaStream;
+          userVideoRef.current.srcObject = newStream as MediaStream;
           userVideoRef.current.onloadedmetadata = () => {
             userVideoRef.current?.play();
           };
