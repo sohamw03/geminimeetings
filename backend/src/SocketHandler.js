@@ -37,28 +37,37 @@ export default function SocketHandler(req, res) {
 
     // Triggered when the person who joined the room is ready to communicate.
     socket.on("ready", (roomName) => {
+      console.log("on: ready, roomName: ", roomName);
       socket.broadcast.to(roomName).emit("ready");
+      console.log(`broadcast to: ${roomName} ready`);
     });
 
     // Triggered when server gets an icecandidate from a peer in the room.
     socket.on("ice-candidate", (candidate, roomName) => {
-      console.log(candidate);
+      console.log("on: ice-candidate, roomName: ", roomName);
       socket.broadcast.to(roomName).emit("ice-candidate", candidate); // Sends candidate to the other peer in the room.
+      console.log(`broadcast to: ${roomName} ice-candidate`);
     });
 
     // Triggered when server gets an offer from a peer in the room.
     socket.on("offer", (offer, roomName) => {
+      console.log("on: offer, roomName: ", roomName);
       socket.broadcast.to(roomName).emit("offer", offer); // Sends offer to the other peer in the room.
+      console.log(`broadcast to: ${roomName} offer`);
     });
 
     // Triggered when server gets an answer from a peer in the room.
     socket.on("answer", (answer, roomName) => {
+      console.log("on: answer, roomName: ", roomName);
       socket.broadcast.to(roomName).emit("answer", answer); // Sends answer to the other peer in the room.
+      console.log(`broadcast to: ${roomName} answer`);
     });
 
     socket.on("leave", (roomName) => {
+      console.log("on: leave, roomName: ", roomName);
       socket.leave(roomName);
       socket.broadcast.to(roomName).emit("leave");
+      console.log(`broadcast to: ${roomName} leave`);
     });
   });
 

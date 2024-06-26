@@ -4,6 +4,8 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import { Box, Button, Modal, Paper, Stack, Typography, styled } from "@mui/material";
 import Grid from "@mui/material/Unstable_Grid2/Grid2";
 import { useState } from "react";
+import AudioSettings from "./AudioSettings";
+import VideoSettings from "./VideoSettings";
 
 export default function Settings() {
   // Global Context
@@ -131,11 +133,11 @@ export default function Settings() {
               </div>
               {/* Audio Panel */}
               <TabPanel value={value} index={0} handleChange={handleChange}>
-                Audio Settings
+                <AudioSettings />
               </TabPanel>
               {/* Video Panel */}
               <TabPanel value={value} index={1} handleChange={handleChange}>
-                Video Settings
+                <VideoSettings />
               </TabPanel>
             </Box>
           </Grid>

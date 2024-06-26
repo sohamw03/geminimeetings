@@ -1,6 +1,5 @@
 "use client";
 import useSocket from "@/hooks/useSocket";
-import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Socket, io } from "socket.io-client";
 
@@ -15,6 +14,11 @@ export interface Values {
   isVideoMuted: boolean;
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  audioDevices: { selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] };
+  setAudioDevices: React.Dispatch<React.SetStateAction<{ selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] }>>;
+  videoDevices: { selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] };
+  setVideoDevices: React.Dispatch<React.SetStateAction<{ selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] }>>;
+  initOrRefreshMediaStream: (mode: "init" | "refresh", audioDeviceId?: string | null, videoDeviceId?: string | null) => void;
 }
 
 const globalContext = createContext<Values>({} as Values);
@@ -25,17 +29,8 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
   const [isVideoMuted, setIsVideoMuted] = useState<boolean>(false);
   const [open, setOpen] = useState(false);
-
-  const router = useRouter();
-
-  useSocket();
-
-  const userVideoRef = useRef<HTMLVideoElement | undefined | null | any>();
-  const peerVideoRef = useRef<HTMLVideoElement | undefined | null | any>();
-  const rtcConnectionRef = useRef<RTCPeerConnection | null>();
-  const socketRef = useRef<Socket>();
-  const userStreamRef = useRef<MediaStream>();
-  const hostRef = useRef<boolean>(false);
+  const [audioDevices, setAudioDevices] = useState<{ selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] }>({ selectedDevice: null, devices: [] });
+  const [videoDevices, setVideoDevices] = useState<{ selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] }>({ selectedDevice: null, devices: [] });
 
   const toggleAudioMute = () => {
     if (userStreamRef.current) {
@@ -55,14 +50,115 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     }
   };
 
+  const initOrRefreshMediaStream = (mode: "init" | "refresh", audioDeviceId?: string | null, videoDeviceId?: string | null) => {
+    console.log(`func: initOrRefreshMediaStream - mode: ${mode}`);
+    console.log(audioDeviceId ? { exact: audioDeviceId } : undefined);
+    console.log(videoDeviceId ? { exact: videoDeviceId } : undefined);
+
+    if (userStreamRef.current) {
+      userStreamRef.current.getTracks().forEach((track) => {
+        track.stop();
+      });
+    }
+
+    navigator.mediaDevices
+      .getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, deviceId: audioDeviceId ? { exact: audioDeviceId } : undefined },
+        video: { width: 1280, height: 720, frameRate: 30, deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined },
+      })
+      .then((stream) => {
+        // Use the stream
+        const audioTracks = stream.getAudioTracks();
+
+        // Create a new MediaStream without audio
+        const newStream = new MediaStream(stream.getVideoTracks());
+
+        userStreamRef.current = stream;
+        if (userVideoRef.current) {
+          userVideoRef.current.srcObject = newStream as MediaStream;
+          userVideoRef.current.onloadedmetadata = () => {
+            userVideoRef.current?.play();
+          };
+        }
+      })
+      .catch((err) => console.error(err));
+
+    if (mode === "refresh") {
+      rtcConnectionRef.current?.getSenders().forEach((sender) => {
+        if (sender.track?.kind === "audio") {
+          sender.replaceTrack(userStreamRef.current?.getAudioTracks()[0] as MediaStreamTrack);
+        } else if (sender.track?.kind === "video") {
+          sender.replaceTrack(userStreamRef.current?.getVideoTracks()[0] as MediaStreamTrack);
+        }
+      });
+      rtcConnectionRef.current
+        ?.createOffer()
+        .then((offer) => {
+          rtcConnectionRef.current?.setLocalDescription(offer);
+          socketRef.current?.emit("offer", offer, roomName);
+        })
+        .catch((err) => console.error(err));
+    }
+  };
+
+  // Get the list of audio and video devices on load
+  useEffect(() => {
+    console.log("Enumerating devices");
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      console.log("enumerateDevices() not supported.");
+    } else {
+      let localAudioDevices: { selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] } = { selectedDevice: null, devices: [] };
+      let localVideoDevices: { selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] } = { selectedDevice: null, devices: [] };
+
+      // List cameras and microphones.
+      navigator.mediaDevices
+        .enumerateDevices()
+        .then((devices) => {
+          devices.forEach((device) => {
+            if (device.kind === "audioinput") {
+              localAudioDevices.devices.push(device);
+            } else if (device.kind === "videoinput") {
+              localVideoDevices.devices.push(device);
+            }
+          });
+          localAudioDevices.selectedDevice = localAudioDevices.devices[0];
+          localVideoDevices.selectedDevice = localVideoDevices.devices[0];
+          setAudioDevices(localAudioDevices);
+          setVideoDevices(localVideoDevices);
+          console.log({ localAudioDevices, localVideoDevices });
+        })
+        .catch((err) => {
+          console.error(`${err.name}: ${err.message}`);
+        });
+    }
+  }, []);
+
+  /** Code to handle WebRTC logic **/
+  useSocket();
+
+  const userVideoRef = useRef<HTMLVideoElement | undefined | null | any>();
+  const peerVideoRef = useRef<HTMLVideoElement | undefined | null | any>();
+  const rtcConnectionRef = useRef<RTCPeerConnection | null>();
+  const socketRef = useRef<Socket>();
+  const userStreamRef = useRef<MediaStream>();
+  const hostRef = useRef<boolean>(false);
+
   // UseEffect to handle the socket connection
   useEffect(() => {
+    console.log("func: Initiating socket connection");
+
+    if (socketRef.current || !roomName) {
+      console.log("cond: Socket already exists or roomName is empty. Exiting...");
+      return;
+    }
+
     socketRef.current = io(`${process.env.NEXT_PUBLIC_WS_HOST}`, {
       path: "/api/socket/",
     });
 
     // First when we join the room
     socketRef.current.emit("join", roomName);
+    console.log("emit: join", roomName);
 
     socketRef.current.on("created", handleRoomCreated);
 
@@ -80,82 +176,32 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
       window.location.href = "/";
     });
 
-    // Events that are webRTC speccific
+    // Events that are webRTC specific
     socketRef.current.on("offer", handleReceivedOffer);
     socketRef.current.on("answer", handleAnswer);
     socketRef.current.on("ice-candidate", handlerNewIceCandidateMsg);
-
-    return () => {
-      socketRef.current?.disconnect();
-    };
   }, [roomName]);
 
   const handleRoomCreated = () => {
+    console.log("on: created - handleRoomCreated");
     hostRef.current = true;
-    navigator.mediaDevices
-      .getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: { width: 1280, height: 720, frameRate: 30 },
-      })
-      .then((stream) => {
-        stream.getTracks().forEach((t) => {
-          t.stop();
-          stream.removeTrack(t);
-        });
-
-        // Use the stream
-        const audioTracks = stream.getAudioTracks();
-
-        // Create a new MediaStream without audio
-        const newStream = new MediaStream(stream.getVideoTracks());
-
-        userStreamRef.current = stream;
-        if (userVideoRef.current) {
-          userVideoRef.current.srcObject = newStream as MediaStream;
-          userVideoRef.current.onloadedmetadata = () => {
-            userVideoRef.current?.play();
-          };
-        }
-      })
-      .catch((err) => console.error(err));
+    initOrRefreshMediaStream("init");
   };
 
   const handleRoomJoined = () => {
-    navigator.mediaDevices
-      .getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: { width: 1280, height: 720, frameRate: 30 },
-      })
-      .then((stream) => {
-        stream.getTracks().forEach((t) => {
-          t.stop();
-          stream.removeTrack(t);
-        });
-
-        // Use the stream
-        const audioTracks = stream.getAudioTracks();
-
-        // Create a new MediaStream without audio
-        const newStream = new MediaStream(stream.getVideoTracks());
-
-        userStreamRef.current = stream;
-        if (userVideoRef.current) {
-          userVideoRef.current.srcObject = newStream as MediaStream;
-          userVideoRef.current.onloadedmetadata = () => {
-            userVideoRef.current?.play();
-          };
-        }
-        socketRef.current?.emit("ready", roomName);
-      })
-      .catch((err) => console.error(err));
+    console.log("on: joined - handleRoomJoined");
+    initOrRefreshMediaStream("init");
+    socketRef.current?.emit("ready", roomName);
+    console.log("emit: ready", roomName);
   };
 
   const initiateCall = () => {
+    console.log("on: ready - initiateCall");
     if (hostRef.current) {
       rtcConnectionRef.current = createPeerConnection();
       if (userStreamRef.current) {
-        rtcConnectionRef.current?.addTrack(userStreamRef.current?.getTracks()[0], userStreamRef.current);
-        rtcConnectionRef.current?.addTrack(userStreamRef.current?.getTracks()[1], userStreamRef.current);
+        rtcConnectionRef.current?.addTrack(userStreamRef.current?.getAudioTracks()[0], userStreamRef.current);
+        rtcConnectionRef.current?.addTrack(userStreamRef.current?.getVideoTracks()[0], userStreamRef.current);
       }
       rtcConnectionRef.current
         ?.createOffer()
@@ -169,9 +215,16 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
 
   const ICE_SERVERS = {
     iceServers: [
-      {
-        urls: "stun:openrelay.metered.ca:80",
-      },
+      { urls: "stun:stun.l.google.com:19302" }, //
+      { urls: "stun:stun.l.google.com:5349" },
+      { urls: "stun:stun1.l.google.com:3478" },
+      { urls: "stun:stun1.l.google.com:5349" },
+      { urls: "stun:stun2.l.google.com:19302" },
+      { urls: "stun:stun2.l.google.com:5349" },
+      { urls: "stun:stun3.l.google.com:3478" },
+      { urls: "stun:stun3.l.google.com:5349" },
+      { urls: "stun:stun4.l.google.com:19302" },
+      { urls: "stun:stun4.l.google.com:5349" },
     ],
   };
 
@@ -188,6 +241,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   };
 
   const handleReceivedOffer = (offer: RTCSessionDescriptionInit) => {
+    console.log("on: offer - handleReceivedOffer");
     if (!hostRef.current) {
       rtcConnectionRef.current = createPeerConnection();
       if (userStreamRef.current) {
@@ -209,6 +263,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   };
 
   const handleAnswer = (answer: RTCSessionDescriptionInit) => {
+    console.log("on: answer - handleAnswer");
     if (rtcConnectionRef.current)
       rtcConnectionRef.current //
         .setRemoteDescription(answer)
@@ -222,6 +277,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   };
 
   const handlerNewIceCandidateMsg = (incoming: RTCIceCandidateInit) => {
+    console.log("on: ice-candidate - handlerNewIceCandidateMsg");
     // We cast the incoming candidate to RTCIceCandidate
     const candidate = new RTCIceCandidate(incoming);
     rtcConnectionRef.current?.addIceCandidate(candidate).catch((e) => console.log(e));
@@ -248,10 +304,12 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
       rtcConnectionRef.current.close();
       rtcConnectionRef.current = null;
     }
+    socketRef.current?.disconnect();
     window.location.assign("/");
   };
 
   const onPeerLeave = () => {
+    console.log("on: leave - onPeerLeave");
     // This person is now the creator because they are the only person in the room.
     hostRef.current = true;
     if (peerVideoRef.current?.srcObject) {
@@ -278,6 +336,11 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     isVideoMuted,
     open,
     setOpen,
+    audioDevices,
+    setAudioDevices,
+    videoDevices,
+    setVideoDevices,
+    initOrRefreshMediaStream,
   };
 
   return <globalContext.Provider value={values}>{children}</globalContext.Provider>;

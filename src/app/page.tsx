@@ -3,13 +3,14 @@
 import Navbar from "@/components/Navbar";
 import { Box, Button, Card, TextField, Typography } from "@mui/material";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 
 export default function Home() {
   const router = useRouter();
   const [roomName, setRoomName] = useState("");
 
-  const joinRoom = () => {
+  const joinRoom = (e: FormEvent) => {
+    e.preventDefault();
     window.location.assign(`/room/${roomName || Math.random().toString(36).slice(2)}`);
   };
 
@@ -20,9 +21,9 @@ export default function Home() {
         <Typography variant="h2" component={"h1"} sx={{ textAlign: "center", userSelect: "none", fontWeight: "bold" }}>
           Welcome to GeminiMeetings
         </Typography>
-        <Box component={"div"} sx={{ display: "flex", margin: "2rem auto", gap: "1rem", justifyContent: "center" }}>
+        <Box component={"form"} sx={{ display: "flex", margin: "2rem auto", gap: "1rem", justifyContent: "center" }} onSubmit={joinRoom}>
           <TextField onChange={(e) => setRoomName(e.target.value)} value={roomName} label="Enter a code to generate or join" variant="outlined" sx={{ width: "30rem", marginLeft: "6rem" }} />
-          <Button variant="text" onClick={joinRoom} size="large" sx={{ width: "6rem" }}>
+          <Button variant="text" type="submit" size="large" sx={{ width: "6rem" }}>
             Join
           </Button>
         </Box>

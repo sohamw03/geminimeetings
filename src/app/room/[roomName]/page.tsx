@@ -10,7 +10,7 @@ export default function Room({ params }: { params: { roomname: string } }) {
   const { roomname } = params;
 
   // Global Context
-  const { peerVideoRef, setRoomName }: Values = useGlobal();
+  const { setRoomName }: Values = useGlobal();
 
   useEffect(() => {
     setRoomName((p) => roomname);

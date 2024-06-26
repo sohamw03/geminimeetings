@@ -10,7 +10,7 @@ import { Box, Button, Modal } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ShieldIcon from "@mui/icons-material/Shield";
 import { useState } from "react";
-import Settings from "./Settings";
+import Settings from "./Settings/Settings";
 
 export default function BottomControls() {
   // Global Context
