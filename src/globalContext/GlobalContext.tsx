@@ -84,20 +84,35 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
       .catch((err) => console.error(err));
 
     if (mode === "refresh") {
-      rtcConnectionRef.current?.getSenders().forEach((sender) => {
-        if (sender.track?.kind === "audio") {
-          sender.replaceTrack(userStreamRef.current?.getAudioTracks()[0] as MediaStreamTrack);
-        } else if (sender.track?.kind === "video") {
-          sender.replaceTrack(userStreamRef.current?.getVideoTracks()[0] as MediaStreamTrack);
-        }
-      });
+      rtcConnectionRef.current?.getSenders().forEach((sender) => rtcConnectionRef.current?.removeTrack(sender));
+      const audioTrack = userStreamRef.current?.getAudioTracks()[0];
+      const videoTrack = userStreamRef.current?.getVideoTracks()[0];
+      if (audioTrack && videoTrack) {
+        audioTrack.enabled = true;
+        videoTrack.enabled = true;
+      }
+      const newStream = new MediaStream();
+      newStream.addTrack(audioTrack as MediaStreamTrack);
+      newStream.addTrack(videoTrack as MediaStreamTrack);
+      rtcConnectionRef.current?.addTrack(audioTrack as MediaStreamTrack, newStream as MediaStream);
+      rtcConnectionRef.current?.addTrack(videoTrack as MediaStreamTrack, newStream as MediaStream);
+
+      // Signal remote peer to update their stream
       rtcConnectionRef.current
         ?.createOffer()
         .then((offer) => {
           rtcConnectionRef.current?.setLocalDescription(offer);
-          socketRef.current?.emit("offer", offer, roomName);
+
+          // Emit the offer to the room
+          socketRef.current?.emit("media_source_change", {
+            type: "offer",
+            sdp: offer?.sdp,
+            roomName: roomName,
+          });
         })
-        .catch((err) => console.error(err));
+        .catch((error) => {
+          console.log(error);
+        });
     }
   };
 
@@ -143,7 +158,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const userStreamRef = useRef<MediaStream>();
   const hostRef = useRef<boolean>(false);
 
-  // UseEffect to handle the socket connection
+  // UseEffect to handle the socket connection and events
   useEffect(() => {
     console.log("func: Initiating socket connection");
 
@@ -180,6 +195,22 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     socketRef.current.on("offer", handleReceivedOffer);
     socketRef.current.on("answer", handleAnswer);
     socketRef.current.on("ice-candidate", handlerNewIceCandidateMsg);
+
+    // On media source change
+    socketRef.current.on("media_source_change", async (data) => {
+      await rtcConnectionRef.current?.setRemoteDescription(data);
+      const answer = await rtcConnectionRef.current?.createAnswer();
+      await rtcConnectionRef.current?.setLocalDescription(answer);
+
+      socketRef.current?.emit("media_source_answer", {
+        answer: answer,
+        roomName: roomName,
+      });
+    });
+
+    socketRef.current.on("media_source_answer", async (answer) => {
+      await rtcConnectionRef.current?.setRemoteDescription(answer);
+    });
   }, [roomName]);
 
   const handleRoomCreated = () => {
@@ -284,7 +315,33 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   };
 
   const handleTrackEvent = (event: RTCTrackEvent) => {
-    if (peerVideoRef.current) peerVideoRef.current.srcObject = event.streams[0] as MediaStream;
+    console.log("func: track - handleTrackEvent; tracks: ", event.streams[0].getTracks());
+    if (peerVideoRef.current && event.streams && event.streams[0]) {
+      const stream = event.streams[0];
+
+      // Ensure all tracks are unmuted
+      stream.getTracks().forEach((track) => {
+        track.enabled = true;
+      });
+
+      // Set the new stream
+      peerVideoRef.current.srcObject = stream;
+
+      // Listen for track ended events
+      stream.getTracks().forEach((track) => {
+        track.onended = () => {
+          console.log(`Track ${track.kind} ended`);
+          // Handle track end - maybe request a new offer from the sender
+        };
+      });
+
+      // Play the video
+      peerVideoRef.current.onloadedmetadata = () => {
+        peerVideoRef.current?.play();
+      };
+    } else {
+      console.error("Missing video element or stream");
+    }
   };
 
   const leaveRoom = () => {

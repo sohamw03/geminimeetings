@@ -69,6 +69,18 @@ export default function SocketHandler(req, res) {
       socket.broadcast.to(roomName).emit("leave");
       console.log(`broadcast to: ${roomName} leave`);
     });
+
+    socket.on("media_source_change", (data) => {
+      console.log("on: media_source_change, data: ", data);
+      socket.broadcast.to(data.roomName).emit("media_source_change", data);
+      console.log(`broadcast to: ${data.roomName} media_source_change`);
+    });
+
+    socket.on("media_source_answer", (data) => {
+      console.log("on: media_source_answer, data: ", data);
+      socket.broadcast.to(data.roomName).emit("media_source_answer", data.answer);
+      console.log(`broadcast to: ${data.roomName} media_source_answer`);
+    });
   });
 
   return res.end();
