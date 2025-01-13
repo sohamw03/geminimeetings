@@ -90,35 +90,15 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
       .catch((err) => console.error(err));
 
     if (mode === "refresh") {
-      rtcConnectionRef.current?.getSenders().forEach((sender) => rtcConnectionRef.current?.removeTrack(sender));
-      const audioTrack = userStreamRef.current?.getAudioTracks()[0];
-      const videoTrack = userStreamRef.current?.getVideoTracks()[0];
-      if (audioTrack && videoTrack) {
-        audioTrack.enabled = true;
-        videoTrack.enabled = true;
+      socketRef.current?.emit("leave", roomName);
+      // Safely closes the existing connection established with the peer who left.
+      if (rtcConnectionRef.current) {
+        rtcConnectionRef.current.ontrack = null;
+        rtcConnectionRef.current.onicecandidate = null;
+        rtcConnectionRef.current.close();
+        rtcConnectionRef.current = null;
       }
-      const newStream = new MediaStream();
-      newStream.addTrack(audioTrack as MediaStreamTrack);
-      newStream.addTrack(videoTrack as MediaStreamTrack);
-      rtcConnectionRef.current?.addTrack(audioTrack as MediaStreamTrack, newStream as MediaStream);
-      rtcConnectionRef.current?.addTrack(videoTrack as MediaStreamTrack, newStream as MediaStream);
-
-      // Signal remote peer to update their stream
-      rtcConnectionRef.current
-        ?.createOffer()
-        .then((offer) => {
-          rtcConnectionRef.current?.setLocalDescription(offer);
-
-          // Emit the offer to the room
-          socketRef.current?.emit("media_source_change", {
-            type: "offer",
-            sdp: offer?.sdp,
-            roomName: roomName,
-          });
-        })
-        .catch((error) => {
-          console.log(error);
-        });
+      socketRef.current?.emit("join", roomName);
     }
   };
 
@@ -214,22 +194,6 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     socketRef.current.on("offer", handleReceivedOffer);
     socketRef.current.on("answer", handleAnswer);
     socketRef.current.on("ice-candidate", handlerNewIceCandidateMsg);
-
-    // On media source change
-    socketRef.current.on("media_source_change", async (data) => {
-      await rtcConnectionRef.current?.setRemoteDescription(data);
-      const answer = await rtcConnectionRef.current?.createAnswer();
-      await rtcConnectionRef.current?.setLocalDescription(answer);
-
-      socketRef.current?.emit("media_source_answer", {
-        answer: answer,
-        roomName: roomName,
-      });
-    });
-
-    socketRef.current.on("media_source_answer", async (answer) => {
-      await rtcConnectionRef.current?.setRemoteDescription(answer);
-    });
   }, [roomName]);
 
   const handleRoomCreated = () => {
@@ -249,10 +213,6 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     console.log("on: ready - initiateCall");
     if (hostRef.current) {
       rtcConnectionRef.current = createPeerConnection();
-      if (userStreamRef.current) {
-        rtcConnectionRef.current?.addTrack(userStreamRef.current?.getAudioTracks()[0], userStreamRef.current);
-        rtcConnectionRef.current?.addTrack(userStreamRef.current?.getVideoTracks()[0], userStreamRef.current);
-      }
       rtcConnectionRef.current
         ?.createOffer()
         .then((offer) => {
@@ -266,15 +226,15 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const ICE_SERVERS = {
     iceServers: [
       { urls: "stun:stun.l.google.com:19302" }, //
-      { urls: "stun:stun.l.google.com:5349" },
-      { urls: "stun:stun1.l.google.com:3478" },
+      // { urls: "stun:stun.l.google.com:5349" },
+      // { urls: "stun:stun1.l.google.com:3478" },
       { urls: "stun:stun1.l.google.com:5349" },
       { urls: "stun:stun2.l.google.com:19302" },
-      { urls: "stun:stun2.l.google.com:5349" },
+      // { urls: "stun:stun2.l.google.com:5349" },
       { urls: "stun:stun3.l.google.com:3478" },
-      { urls: "stun:stun3.l.google.com:5349" },
+      // { urls: "stun:stun3.l.google.com:5349" },
       { urls: "stun:stun4.l.google.com:19302" },
-      { urls: "stun:stun4.l.google.com:5349" },
+      // { urls: "stun:stun4.l.google.com:5349" },
     ],
   };
 
@@ -287,6 +247,12 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
 
     // We implement our onTrack method for when we receive tracks
     connection.ontrack = handleTrackEvent;
+
+    if (userStreamRef.current) {
+      userStreamRef.current.getTracks().forEach((track) => {
+        connection.addTrack(track, userStreamRef.current as MediaStream);
+      });
+    }
     return connection;
   };
 
@@ -294,10 +260,6 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     console.log("on: offer - handleReceivedOffer");
     if (!hostRef.current) {
       rtcConnectionRef.current = createPeerConnection();
-      if (userStreamRef.current) {
-        rtcConnectionRef.current.addTrack(userStreamRef.current.getTracks()[0], userStreamRef.current);
-        rtcConnectionRef.current.addTrack(userStreamRef.current.getTracks()[1], userStreamRef.current);
-      }
       rtcConnectionRef.current.setRemoteDescription(offer);
 
       rtcConnectionRef.current
@@ -335,6 +297,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
 
   const handleTrackEvent = (event: RTCTrackEvent) => {
     console.log("func: track - handleTrackEvent; tracks: ", event.streams[0].getTracks());
+
     if (peerVideoRef.current && event.streams && event.streams[0]) {
       const stream = event.streams[0];
 
@@ -358,6 +321,15 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
       peerVideoRef.current.onloadedmetadata = () => {
         peerVideoRef.current?.play();
       };
+
+      // Update the outbound stream
+      if (userStreamRef) {
+        rtcConnectionRef.current?.getSenders().forEach((sender) => {
+          if (sender.track && userStreamRef.current) {
+            sender.replaceTrack(userStreamRef.current.getTracks().find((track) => track.kind === sender.track?.kind) as MediaStreamTrack);
+          }
+        });
+      }
     } else {
       console.error("Missing video element or stream");
     }

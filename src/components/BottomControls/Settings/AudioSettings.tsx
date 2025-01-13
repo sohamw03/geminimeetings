@@ -1,13 +1,17 @@
 "use client";
 import { useGlobal } from "@/globalContext/GlobalContext";
 import { Box, FormControl, InputLabel, MenuItem, Select } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function AudioSettings() {
   // Global Context
   const { audioDevices, setAudioDevices, initOrRefreshMediaStream } = useGlobal();
   // Local State
   const [localAudioDevices, setLocalAudioDevices] = useState<MediaDeviceInfo[]>(audioDevices.devices);
+
+  useEffect(() => {
+    setLocalAudioDevices(audioDevices.devices);
+  }, [audioDevices.devices]);
 
   const handleMicChange = (event: any) => {
     let selectedDevice = audioDevices.devices.find((device) => device.deviceId === event.target.value) as MediaDeviceInfo;
