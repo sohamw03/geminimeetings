@@ -11,7 +11,8 @@ export default function Home() {
 
   const joinRoom = (e: FormEvent) => {
     e.preventDefault();
-    window.location.assign(`/room/${roomName || Math.random().toString(36).slice(2)}`);
+    // window.location.assign(`/room/${roomName || Math.random().toString(36).slice(2)}`);
+    router.push(`/room/${roomName || Math.random().toString(36).slice(2)}`);
   };
 
   return (

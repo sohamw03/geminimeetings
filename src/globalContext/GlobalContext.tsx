@@ -29,8 +29,14 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
   const [isVideoMuted, setIsVideoMuted] = useState<boolean>(false);
   const [open, setOpen] = useState(false);
-  const [audioDevices, setAudioDevices] = useState<{ selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] }>({ selectedDevice: null, devices: [] });
-  const [videoDevices, setVideoDevices] = useState<{ selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] }>({ selectedDevice: null, devices: [] });
+  const [audioDevices, setAudioDevices] = useState<{ selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] }>({
+    selectedDevice: null,
+    devices: [],
+  });
+  const [videoDevices, setVideoDevices] = useState<{ selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] }>({
+    selectedDevice: null,
+    devices: [],
+  });
 
   const toggleAudioMute = () => {
     if (userStreamRef.current) {
@@ -117,7 +123,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   };
 
   // Get the list of audio and video devices on load
-  useEffect(() => {
+  const listDevices = async () => {
     console.log("Enumerating devices");
     if (!navigator.mediaDevices?.enumerateDevices) {
       console.log("enumerateDevices() not supported.");
@@ -146,6 +152,19 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
           console.error(`${err.name}: ${err.message}`);
         });
     }
+  };
+  useEffect(() => {
+    listDevices();
+  }, [open]);
+  useEffect(() => {
+    navigator.mediaDevices.addEventListener("devicechange", (event) => {
+      listDevices();
+    });
+    return () => {
+      navigator.mediaDevices.removeEventListener("devicechange", (event) => {
+        listDevices();
+      });
+    };
   }, []);
 
   /** Code to handle WebRTC logic **/
@@ -162,7 +181,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   useEffect(() => {
     console.log("func: Initiating socket connection");
 
-    if (socketRef.current || !roomName) {
+    if (socketRef.current != undefined || roomName == "") {
       console.log("cond: Socket already exists or roomName is empty. Exiting...");
       return;
     }
