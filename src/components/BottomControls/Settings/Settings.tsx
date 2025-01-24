@@ -37,15 +37,14 @@ export default function Settings() {
       {/* Trigger */}
       <Button
         sx={{
-          p: 2,
+          p: { xs: 1.5, md: 2 },
           mr: 3.5,
           borderRadius: "100%",
         }}
         className="border-2 border-gray-700 border-solid"
         onClick={() => {
           setOpen(true);
-        }}
-      >
+        }}>
         <SettingsIcon fontSize="large" />
       </Button>
       {/* Modal */}
@@ -55,8 +54,7 @@ export default function Settings() {
           setOpen(false);
         }}
         aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
+        aria-describedby="modal-modal-description">
         <Paper
           elevation={4}
           sx={{
@@ -64,36 +62,35 @@ export default function Settings() {
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            width: "80vw",
+            width: "95vw",
             maxWidth: "60rem",
-            height: "70vh",
+            height: { xs: "90vh", md: "70vh" },
             maxHeight: "40rem",
             p: 0,
             borderRadius: 4,
-          }}
-        >
+          }}>
           <Grid
             container
             sx={{
               height: "100%",
-            }}
-          >
+              flexDirection: { xs: "column", md: "row" },
+            }}>
             <Grid
-              xs={4}
+              xs={12}
+              md={4}
               sx={{
-                borderRight: "1px solid #323232",
-                height: "100%",
+                borderRight: { xs: "none", md: "1px solid #323232" },
+                borderBottom: { xs: "1px solid #323232", md: "none" },
+                height: { xs: "auto", md: "100%" },
                 pr: 2,
-              }}
-            >
+              }}>
               <Stack spacing={2}>
                 <Typography
                   variant="h4"
                   sx={{
                     p: 3,
                     pb: 1,
-                  }}
-                >
+                  }}>
                   Settings
                 </Typography>
                 <Item
@@ -103,8 +100,7 @@ export default function Settings() {
                   className="transition-all"
                   sx={{
                     backgroundColor: value === 0 ? "#323232" : "transparent",
-                  }}
-                >
+                  }}>
                   Audio
                 </Item>
                 <Item
@@ -114,8 +110,7 @@ export default function Settings() {
                   className="transition-all"
                   sx={{
                     backgroundColor: value === 1 ? "#323232" : "transparent",
-                  }}
-                >
+                  }}>
                   Video
                 </Item>
               </Stack>
@@ -125,8 +120,7 @@ export default function Settings() {
                 display: "flex",
                 flex: 1,
                 flexDirection: "column",
-              }}
-            >
+              }}>
               <div className="w-full flex flex-row justify-end h-16">
                 <Button
                   sx={{
@@ -136,8 +130,7 @@ export default function Settings() {
                     setOpen(false);
                   }}
                   size="small"
-                  variant="text"
-                >
+                  variant="text">
                   <CloseIcon fontSize="small" />
                 </Button>
               </div>

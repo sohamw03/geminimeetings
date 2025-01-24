@@ -9,7 +9,7 @@ export default function VideoCard({ mode }: { mode: "user" | "peer" }) {
   switch (mode) {
     case "user":
       return (
-        <Paper elevation={3} className="fixed bottom-36 right-8 rounded-xl cursor-pointer w-[25rem] aspect-video">
+        <Paper elevation={3} className="fixed bottom-36 right-4 md:right-4 rounded-xl cursor-pointer w-[40vw] md:w-[25rem] aspect-video z-10">
           <video
             autoPlay
             playsInline
@@ -22,11 +22,9 @@ export default function VideoCard({ mode }: { mode: "user" | "peer" }) {
       );
     case "peer":
       return (
-        <>
-          <Paper elevation={1} className="mb-32 rounded-xl cursor-pointer w-full h-full flex justify-center">
-            <video autoPlay playsInline controls={false} ref={peerVideoRef as LegacyRef<HTMLVideoElement>} className="aspect-video rounded-xl" />
-          </Paper>
-        </>
+        <Paper elevation={2} className="rounded-xl cursor-pointer w-[calc(100%-0.5rem)] h-[calc(100%-0.5rem)] flex justify-center items-center">
+          <video autoPlay playsInline controls={false} ref={peerVideoRef as LegacyRef<HTMLVideoElement>} className="aspect-video h-full w-full" />
+        </Paper>
       );
   }
 }

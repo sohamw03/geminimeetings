@@ -1,6 +1,5 @@
 "use client";
 import useSocket from "@/hooks/useSocket";
-import { useSearchParams } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import SimplePeer from "simple-peer";
 import { Socket, io } from "socket.io-client";
@@ -16,12 +15,16 @@ export interface Values {
   isVideoMuted: boolean;
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  audioDevices: { selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] };
-  setAudioDevices: React.Dispatch<React.SetStateAction<{ selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] }>>;
-  videoDevices: { selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] };
-  setVideoDevices: React.Dispatch<React.SetStateAction<{ selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] }>>;
+  audioDevices: { devices: MediaDeviceInfo[] };
+  setAudioDevices: React.Dispatch<React.SetStateAction<{ devices: MediaDeviceInfo[] }>>;
+  videoDevices: { devices: MediaDeviceInfo[] };
+  setVideoDevices: React.Dispatch<React.SetStateAction<{ devices: MediaDeviceInfo[] }>>;
   initOrRefreshMediaStream: (mode: "init" | "refresh", audioDeviceId?: string | null, videoDeviceId?: string | null) => void;
   initSocket: (roomName: string) => void;
+  selectedAudioDeviceId: string | null;
+  setSelectedAudioDeviceId: React.Dispatch<React.SetStateAction<string | null>>;
+  selectedVideoDeviceId: string | null;
+  setSelectedVideoDeviceId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 const globalContext = createContext<Values>({} as Values);
@@ -32,14 +35,10 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
   const [isVideoMuted, setIsVideoMuted] = useState<boolean>(false);
   const [open, setOpen] = useState(false);
-  const [audioDevices, setAudioDevices] = useState<{ selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] }>({
-    selectedDevice: null,
-    devices: [],
-  });
-  const [videoDevices, setVideoDevices] = useState<{ selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] }>({
-    selectedDevice: null,
-    devices: [],
-  });
+  const [audioDevices, setAudioDevices] = useState<{ devices: MediaDeviceInfo[] }>({ devices: [] });
+  const [videoDevices, setVideoDevices] = useState<{ devices: MediaDeviceInfo[] }>({ devices: [] });
+  const [selectedAudioDeviceId, setSelectedAudioDeviceId] = useState<string | null>(null);
+  const [selectedVideoDeviceId, setSelectedVideoDeviceId] = useState<string | null>(null);
 
   const userVideoRef = useRef<HTMLVideoElement | undefined | null | any>();
   const peerVideoRef = useRef<HTMLVideoElement | undefined | null | any>();
@@ -130,8 +129,8 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     if (!navigator.mediaDevices?.enumerateDevices) {
       console.log("enumerateDevices() not supported.");
     } else {
-      let localAudioDevices: { selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] } = { selectedDevice: null, devices: [] };
-      let localVideoDevices: { selectedDevice: MediaDeviceInfo | null; devices: MediaDeviceInfo[] } = { selectedDevice: null, devices: [] };
+      let localAudioDevices: { devices: MediaDeviceInfo[] } = { devices: [] };
+      let localVideoDevices: { devices: MediaDeviceInfo[] } = { devices: [] };
 
       // List cameras and microphones.
       navigator.mediaDevices
@@ -144,10 +143,15 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
               localVideoDevices.devices.push(device);
             }
           });
-          localAudioDevices.selectedDevice = localAudioDevices.devices[0];
-          localVideoDevices.selectedDevice = localVideoDevices.devices[0];
-          setAudioDevices(localAudioDevices);
-          setVideoDevices(localVideoDevices);
+          // Set initial selected device IDs if not already set
+          if (!selectedAudioDeviceId && localAudioDevices.devices.length > 0) {
+            setSelectedAudioDeviceId(localAudioDevices.devices[0].deviceId);
+          }
+          if (!selectedVideoDeviceId && localVideoDevices.devices.length > 0) {
+            setSelectedVideoDeviceId(localVideoDevices.devices[0].deviceId);
+          }
+          setAudioDevices({ devices: localAudioDevices.devices });
+          setVideoDevices({ devices: localVideoDevices.devices });
           console.log({ localAudioDevices, localVideoDevices });
         })
         .catch((err) => {
@@ -177,27 +181,42 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     console.log("func: Initiating socket connection");
     setRoomName(localRoomName);
 
-    if (socketRef.current !== undefined) {
-      console.log("cond: Socket already exists. Exiting...");
-      return;
+    if (socketRef.current) {
+      socketRef.current.removeAllListeners();
+      socketRef.current.disconnect();
+      socketRef.current = undefined;
     }
 
+    // Create new socket connection
     socketRef.current = io(`${process.env.NEXT_PUBLIC_WS_HOST}`, {
       path: "/api/socket/",
+      forceNew: true,
     });
+
+    // Reset state
+    hostRef.current = false;
+    if (peerRef.current) {
+      cleanupPeerConnection();
+    }
 
     // First when we join the room
     console.log({ localRoomName });
     socketRef.current.emit("join", localRoomName);
 
-    socketRef.current.on("created", () => {
-      hostRef.current = true;
+    socketRef.current.on("created", ({ isHost }) => {
+      hostRef.current = isHost;
       initOrRefreshMediaStream("init");
     });
 
-    socketRef.current.on("joined", () => {
+    socketRef.current.on("joined", ({ isHost }) => {
+      hostRef.current = isHost;
       initOrRefreshMediaStream("init");
       socketRef.current?.emit("ready", localRoomName);
+    });
+
+    socketRef.current.on("host_changed", ({ isHost }) => {
+      console.log("Became host:", isHost);
+      hostRef.current = isHost;
     });
 
     socketRef.current.on("ready", () => {
@@ -240,12 +259,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
 
     socketRef.current.on("leave", () => {
       hostRef.current = true;
-      if (peerRef.current) {
-        peerRef.current.destroy();
-      }
-      if (peerVideoRef.current?.srcObject) {
-        (peerVideoRef.current.srcObject as MediaStream).getTracks().forEach((track) => track.stop());
-      }
+      cleanupPeerConnection();
     });
 
     socketRef.current.on("full", () => {
@@ -253,21 +267,56 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     });
   };
 
-  const leaveRoom = () => {
-    socketRef.current?.emit("leave", roomName);
-
-    if (userVideoRef.current?.srcObject) {
-      (userVideoRef.current.srcObject as MediaStream).getTracks().forEach((track) => track.stop());
-    }
-    if (peerVideoRef.current?.srcObject) {
-      (peerVideoRef.current.srcObject as MediaStream).getTracks().forEach((track) => track.stop());
-    }
-
+  const cleanupPeerConnection = () => {
     if (peerRef.current) {
+      peerRef.current.removeAllListeners();
       peerRef.current.destroy();
+      peerRef.current = undefined;
     }
 
-    socketRef.current?.disconnect();
+    if (peerVideoRef.current?.srcObject) {
+      const stream = peerVideoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((track) => {
+        track.stop();
+        stream.removeTrack(track);
+      });
+      peerVideoRef.current.srcObject = null;
+    }
+  };
+
+  const leaveRoom = () => {
+    // First notify others we're leaving
+    if (socketRef.current?.connected) {
+      socketRef.current.emit("leave", roomName);
+    }
+
+    // Cleanup user media
+    if (userVideoRef.current?.srcObject) {
+      const stream = userVideoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((track) => {
+        track.stop();
+        stream.removeTrack(track);
+      });
+      userVideoRef.current.srcObject = null;
+      userStreamRef.current = undefined;
+    }
+
+    // Cleanup peer connection
+    cleanupPeerConnection();
+
+    // Reset states
+    setRoomName("");
+    setIsAudioMuted(false);
+    setIsVideoMuted(false);
+    hostRef.current = false;
+
+    // Cleanup socket
+    if (socketRef.current) {
+      socketRef.current.removeAllListeners();
+      socketRef.current.disconnect();
+      socketRef.current = undefined;
+    }
+
     window.location.assign("/");
   };
 
@@ -288,6 +337,10 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     setVideoDevices,
     initOrRefreshMediaStream,
     initSocket,
+    selectedAudioDeviceId,
+    setSelectedAudioDeviceId,
+    selectedVideoDeviceId,
+    setSelectedVideoDeviceId,
   };
 
   return <globalContext.Provider value={values}>{children}</globalContext.Provider>;

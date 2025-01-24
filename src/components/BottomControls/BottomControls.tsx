@@ -19,23 +19,20 @@ export default function BottomControls() {
   return (
     <Box
       sx={{
-        position: "fixed",
-        bottom: "1.6rem",
-        left: "50%",
-        transform: "translateX(-50%)",
-        gap: "1rem",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
         width: "100%",
-        zIndex: 999,
+        height: "100%",
+        px: { xs: 1, md: 0 },
       }}>
       {/* Placeholder (Left) */}
       <Box>
         <Button
           disabled
           sx={{
-            ml: 3.5,
+            ml: { xs: 1, md: 3.5 },
+            display: { md: 'flex' }
           }}>
           <ShieldIcon fontSize="large" />
         </Button>
@@ -43,7 +40,7 @@ export default function BottomControls() {
       {/* Media Controls (Center) */}
       <Box
         sx={{
-          gap: "1rem",
+          gap: { xs: "0.5rem", md: "1rem" },
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
@@ -54,9 +51,9 @@ export default function BottomControls() {
           }}
           className="border-2 border-gray-700 border-solid"
           color={!isAudioMuted ? "primary" : "error"}
-          sx={{ p: 2, borderRadius: "100%" }}
+          sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }}
           variant={!isAudioMuted ? "text" : "contained"}>
-          {!isAudioMuted ? <MicIcon fontSize="large" /> : <MicOffIcon fontSize="large" />}
+          {!isAudioMuted ? <MicIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} /> : <MicOffIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />}
         </Button>
         <Button
           onClick={() => {
@@ -64,19 +61,20 @@ export default function BottomControls() {
           }}
           className="border-2 border-gray-700 border-solid"
           color={!isVideoMuted ? "primary" : "error"}
-          sx={{ p: 2, borderRadius: "100%" }}
+          sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }}
           variant={!isVideoMuted ? "text" : "contained"}>
-          {!isVideoMuted ? <VideocamIcon fontSize="large" /> : <VideocamOff fontSize="large" />}
+          {!isVideoMuted ? <VideocamIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} /> : <VideocamOff fontSize={window.innerWidth > 768 ? "large" : "medium"} />}
         </Button>
         <Button
           sx={{
-            p: 2,
+            p: { xs: 1.5, md: 2 },
             borderRadius: "100%",
+            aspectRatio: 1,
           }}
           color="error"
           onClick={leaveRoom}
           variant="contained">
-          <CallEndIcon fontSize="large" />
+          <CallEndIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
         </Button>
       </Box>
       {/* Settings (Right) */}

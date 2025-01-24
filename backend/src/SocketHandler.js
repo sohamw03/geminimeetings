@@ -12,6 +12,8 @@ export default function SocketHandler(req, res) {
   });
   res.socket.server.io = io;
 
+  const roomHosts = new Map();
+
   io.on("connection", (socket) => {
     console.log(`User connected : ${socket.id}`);
 
@@ -23,16 +25,22 @@ export default function SocketHandler(req, res) {
       // If room == undefined when the room doesn't exist.
       if (room === undefined) {
         socket.join(roomName);
-        socket.emit("created");
+        roomHosts.set(roomName, socket.id); // Set initial host
+        socket.emit("created", { isHost: true });
       } else if (room.size === 1) {
         // If room.size == 1 when the room has one person already.
         socket.join(roomName);
-        socket.emit("joined");
+        const isHost = !roomHosts.has(roomName); // If no host exists, become host
+        if (isHost) {
+          roomHosts.set(roomName, socket.id);
+        }
+        socket.emit("joined", { isHost });
       } else {
         // When there are already two people in the room.
         socket.emit("full");
       }
-      console.log(rooms);
+      console.log("Rooms:", rooms);
+      console.log("Hosts:", roomHosts);
     });
 
     // Triggered when the person who joined the room is ready to communicate.
@@ -65,9 +73,33 @@ export default function SocketHandler(req, res) {
 
     socket.on("leave", (roomName) => {
       console.log("on: leave, roomName: ", roomName);
+
+      // If leaving socket was the host, assign host to remaining peer
+      if (roomHosts.get(roomName) === socket.id) {
+        const room = io.sockets.adapter.rooms.get(roomName);
+        if (room && room.size > 1) {
+          // Get the other peer in the room
+          const remainingPeer = Array.from(room).find(id => id !== socket.id);
+          if (remainingPeer) {
+            roomHosts.set(roomName, remainingPeer);
+            io.to(remainingPeer).emit("host_changed", { isHost: true });
+          }
+        }
+      }
+
       socket.leave(roomName);
       socket.broadcast.to(roomName).emit("leave");
-      console.log(`broadcast to: ${roomName} leave`);
+
+      // Check if room is empty after leave and clean it up
+      const room = io.sockets.adapter.rooms.get(roomName);
+      if (!room || room.size === 0) {
+        roomHosts.delete(roomName);
+        io.sockets.adapter.rooms.delete(roomName);
+        console.log(`Room ${roomName} has been cleaned up`);
+      }
+
+      console.log("Rooms:", io.sockets.adapter.rooms);
+      console.log("Hosts:", roomHosts);
     });
 
     socket.on("media_source_change", (data) => {
