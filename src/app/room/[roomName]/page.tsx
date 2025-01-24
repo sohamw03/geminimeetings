@@ -4,16 +4,16 @@ import BottomControls from "@/components/BottomControls/BottomControls";
 import VideoCard from "@/components/VideoCard";
 import { Values, useGlobal } from "@/globalContext/GlobalContext";
 import { Box, SxProps } from "@mui/material";
-import { LegacyRef, useEffect } from "react";
+import { useEffect } from "react"
 
-export default function Room({ params }: { params: { roomname: string } }) {
-  const { roomname } = params;
+export default function Room({ params }: { params: { roomName: string } }) {
+  const { roomName } = params;
 
   // Global Context
-  const { setRoomName }: Values = useGlobal();
+  const { initSocket }: Values = useGlobal();
 
   useEffect(() => {
-    setRoomName((p) => roomname);
+    initSocket(roomName);
   }, []);
 
   return (
