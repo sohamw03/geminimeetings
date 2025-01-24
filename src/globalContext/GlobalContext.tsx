@@ -48,8 +48,6 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const peerRef = useRef<SimplePeer.Instance>();
   const hostRef = useRef<boolean>(false);
 
-  const searchParams = useSearchParams();
-
   const toggleAudioMute = (options?: { noUIToggle?: boolean }) => {
     if (userStreamRef.current) {
       userStreamRef.current.getAudioTracks().forEach((track) => {
@@ -100,7 +98,8 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
 
         if (mode === "refresh" && peerRef.current) {
           // Get all existing senders in the peer connection
-          const senders = peerRef.current._pc.getSenders();
+          const peerConnection = (peerRef.current as any)._pc;
+          const senders = peerConnection.getSenders();
 
           // Replace tracks for each sender
           stream.getTracks().forEach((track) => {
