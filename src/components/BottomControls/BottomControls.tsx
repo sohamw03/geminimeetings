@@ -5,16 +5,28 @@ import { VideocamOff } from "@mui/icons-material";
 import CallEndIcon from "@mui/icons-material/CallEnd";
 import MicIcon from "@mui/icons-material/Mic";
 import MicOffIcon from "@mui/icons-material/MicOff";
-import VideocamIcon from "@mui/icons-material/Videocam";
-import { Box, Button, Modal } from "@mui/material";
-import SettingsIcon from "@mui/icons-material/Settings";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import PresentToAllIcon from "@mui/icons-material/PresentToAll";
 import ShieldIcon from "@mui/icons-material/Shield";
+import StopScreenShareIcon from "@mui/icons-material/StopScreenShare";
+import VideocamIcon from "@mui/icons-material/Videocam";
+import { Box, Button, Menu, MenuItem } from "@mui/material";
 import { useState } from "react";
 import Settings from "./Settings/Settings";
 
 export default function BottomControls() {
   // Global Context
-  const { leaveRoom, toggleAudioMute, toggleVideoMute, isAudioMuted, isVideoMuted }: Values = useGlobal();
+  const { leaveRoom, toggleAudioMute, toggleVideoMute, isAudioMuted, isVideoMuted, isScreenSharing, toggleScreenShare }: Values = useGlobal();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
 
   return (
     <Box
@@ -32,7 +44,7 @@ export default function BottomControls() {
           disabled
           sx={{
             ml: { xs: 1, md: 3.5 },
-            display: { md: 'flex' }
+            display: { md: "flex" },
           }}>
           <ShieldIcon fontSize="large" />
         </Button>
@@ -65,6 +77,9 @@ export default function BottomControls() {
           variant={!isVideoMuted ? "text" : "contained"}>
           {!isVideoMuted ? <VideocamIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} /> : <VideocamOff fontSize={window.innerWidth > 768 ? "large" : "medium"} />}
         </Button>
+        <Button onClick={toggleScreenShare} className="border-2 border-gray-700 border-solid" color={isScreenSharing ? "error" : "primary"} sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }} variant={isScreenSharing ? "contained" : "text"}>
+          {isScreenSharing ? <StopScreenShareIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} /> : <PresentToAllIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />}
+        </Button>
         <Button
           sx={{
             p: { xs: 1.5, md: 2 },
@@ -76,6 +91,25 @@ export default function BottomControls() {
           variant="contained">
           <CallEndIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
         </Button>
+
+        <Button onClick={handleClick} className="border-2 border-gray-700 border-solid" sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }}>
+          <MoreVertIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
+        </Button>
+
+        <Menu
+          anchorEl={anchorEl}
+          open={open}
+          onClose={handleClose}
+          anchorOrigin={{
+            vertical: "top",
+            horizontal: "center",
+          }}
+          transformOrigin={{
+            vertical: "bottom",
+            horizontal: "center",
+          }}>
+          <MenuItem onClick={toggleScreenShare}></MenuItem>
+        </Menu>
       </Box>
       {/* Settings (Right) */}
       <Box>

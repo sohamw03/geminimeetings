@@ -9,8 +9,8 @@ export interface Values {
   peerVideoRef: React.RefObject<HTMLVideoElement | undefined | null>;
   setRoomName: React.Dispatch<React.SetStateAction<string>>;
   leaveRoom: () => void;
-  toggleAudioMute: (options?: { noUIToggle?: boolean }) => void;
-  toggleVideoMute: (options?: { noUIToggle?: boolean }) => void;
+  toggleAudioMute: (options?: { noUIToggle?: boolean; forceState?: boolean }) => void;
+  toggleVideoMute: (options?: { noUIToggle?: boolean; forceState?: boolean }) => void;
   isAudioMuted: boolean;
   isVideoMuted: boolean;
   open: boolean;
@@ -25,6 +25,9 @@ export interface Values {
   setSelectedAudioDeviceId: React.Dispatch<React.SetStateAction<string | null>>;
   selectedVideoDeviceId: string | null;
   setSelectedVideoDeviceId: React.Dispatch<React.SetStateAction<string | null>>;
+  isScreenSharing: boolean;
+  isPeerScreenSharing: boolean; // Add this line
+  toggleScreenShare: () => Promise<void>;
 }
 
 const globalContext = createContext<Values>({} as Values);
@@ -39,6 +42,8 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const [videoDevices, setVideoDevices] = useState<{ devices: MediaDeviceInfo[] }>({ devices: [] });
   const [selectedAudioDeviceId, setSelectedAudioDeviceId] = useState<string | null>(null);
   const [selectedVideoDeviceId, setSelectedVideoDeviceId] = useState<string | null>(null);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [isPeerScreenSharing, setIsPeerScreenSharing] = useState(false);
 
   const userVideoRef = useRef<HTMLVideoElement | undefined | null | any>();
   const peerVideoRef = useRef<HTMLVideoElement | undefined | null | any>();
@@ -46,25 +51,29 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const userStreamRef = useRef<MediaStream>();
   const peerRef = useRef<SimplePeer.Instance>();
   const hostRef = useRef<boolean>(false);
+  const screenStreamRef = useRef<MediaStream>();
+  const wasVideoEnabledBeforeScreenShare = useRef<boolean>(false); // Add this line
 
-  const toggleAudioMute = (options?: { noUIToggle?: boolean }) => {
+  const toggleAudioMute = (options?: { noUIToggle?: boolean; forceState?: boolean }) => {
     if (userStreamRef.current) {
+      const newState = options?.forceState !== undefined ? !options.forceState : !userStreamRef.current.getAudioTracks()[0].enabled;
       userStreamRef.current.getAudioTracks().forEach((track) => {
-        track.enabled = !track.enabled;
+        track.enabled = newState;
       });
       if (!options || options?.noUIToggle === false) {
-        setIsAudioMuted(!isAudioMuted);
+        setIsAudioMuted(!newState);
       }
     }
   };
 
-  const toggleVideoMute = (options?: { noUIToggle?: boolean }) => {
+  const toggleVideoMute = (options?: { noUIToggle?: boolean; forceState?: boolean }) => {
     if (userStreamRef.current) {
+      const newState = options?.forceState !== undefined ? !options.forceState : !userStreamRef.current.getVideoTracks()[0].enabled;
       userStreamRef.current.getVideoTracks().forEach((track) => {
-        track.enabled = !track.enabled;
+        track.enabled = newState;
       });
       if (!options || options?.noUIToggle === false) {
-        setIsVideoMuted(!isVideoMuted);
+        setIsVideoMuted(!newState);
       }
     }
   };
@@ -223,6 +232,14 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
       if (hostRef.current && userStreamRef.current) {
         peerRef.current = new SimplePeer({ initiator: true, stream: userStreamRef.current, trickle: false });
 
+        // Add data channel handlers
+        peerRef.current.on("data", (data) => {
+          const message = JSON.parse(data.toString());
+          if (message.type === "screenShare") {
+            setIsPeerScreenSharing(message.isScreenSharing);
+          }
+        });
+
         peerRef.current.on("signal", (data) => {
           socketRef.current?.emit("offer", data, localRoomName);
         });
@@ -238,6 +255,14 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     socketRef.current.on("offer", (offer) => {
       if (!hostRef.current && userStreamRef.current) {
         peerRef.current = new SimplePeer({ initiator: false, stream: userStreamRef.current, trickle: false });
+
+        // Add data channel handlers
+        peerRef.current.on("data", (data) => {
+          const message = JSON.parse(data.toString());
+          if (message.type === "screenShare") {
+            setIsPeerScreenSharing(message.isScreenSharing);
+          }
+        });
 
         peerRef.current.on("signal", (data) => {
           socketRef.current?.emit("answer", data, localRoomName);
@@ -304,6 +329,13 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     // Cleanup peer connection
     cleanupPeerConnection();
 
+    // Cleanup screen sharing
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach((track) => track.stop());
+      screenStreamRef.current = undefined;
+    }
+    setIsScreenSharing(false);
+
     // Reset states
     setRoomName("");
     setIsAudioMuted(false);
@@ -318,6 +350,89 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     }
 
     window.location.assign("/");
+  };
+
+  const toggleScreenShare = async () => {
+    try {
+      if (!isScreenSharing) {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        screenStreamRef.current = stream;
+        setIsScreenSharing(true);
+
+        // Store current video state before muting
+        wasVideoEnabledBeforeScreenShare.current = userStreamRef.current?.getVideoTracks()[0]?.enabled || false;
+
+        // Force mute the video (true = muted)
+        toggleVideoMute({ forceState: true, noUIToggle: false });
+
+        // Handle stream ending (user clicks "Stop Sharing")
+        stream.getVideoTracks()[0].onended = () => {
+          setIsScreenSharing(false);
+          if (screenStreamRef.current) {
+            screenStreamRef.current.getTracks().forEach((track) => track.stop());
+            screenStreamRef.current = undefined;
+          }
+
+          // Restore original video state
+          if (wasVideoEnabledBeforeScreenShare.current) {
+            toggleVideoMute({ forceState: false, noUIToggle: false });
+          }
+
+          // Replace screen share track with original video track in peer connection
+          if (peerRef.current && userStreamRef.current) {
+            const peerConnection = (peerRef.current as any)._pc;
+            const senders = peerConnection.getSenders();
+            const videoSender = senders.find((s: any) => s.track?.kind === "video");
+            if (videoSender) {
+              videoSender.replaceTrack(userStreamRef.current.getVideoTracks()[0]).catch((err: any) => console.error("Error replacing track:", err));
+            }
+          }
+        };
+
+        // Replace video track with screen share track in peer connection
+        if (peerRef.current) {
+          const peerConnection = (peerRef.current as any)._pc;
+          const senders = peerConnection.getSenders();
+          const videoSender = senders.find((s: any) => s.track?.kind === "video");
+          if (videoSender) {
+            videoSender.replaceTrack(stream.getVideoTracks()[0]).catch((err: any) => console.error("Error replacing track:", err));
+          }
+        }
+
+        // Notify peer about screen sharing
+        peerRef.current?.send(JSON.stringify({ type: "screenShare", isScreenSharing: true }));
+      } else {
+        if (screenStreamRef.current) {
+          screenStreamRef.current.getTracks().forEach((track) => track.stop());
+          screenStreamRef.current = undefined;
+        }
+        setIsScreenSharing(false);
+
+        // Replace screen share track with original video track
+        if (peerRef.current && userStreamRef.current) {
+          const peerConnection = (peerRef.current as any)._pc;
+          const senders = peerConnection.getSenders();
+          const videoSender = senders.find((s: any) => s.track?.kind === "video");
+          if (videoSender) {
+            videoSender.replaceTrack(userStreamRef.current.getVideoTracks()[0]).catch((err: any) => console.error("Error replacing track:", err));
+          }
+        }
+
+        // Restore to original video state
+        if (wasVideoEnabledBeforeScreenShare.current) {
+          toggleVideoMute({ forceState: false, noUIToggle: false });
+        } else {
+          toggleVideoMute({ forceState: true, noUIToggle: false });
+        }
+
+        // Notify peer about stopping screen share
+        peerRef.current?.send(JSON.stringify({ type: "screenShare", isScreenSharing: false }));
+      }
+    } catch (err) {
+      console.error("Error sharing screen:", err);
+      setIsScreenSharing(false);
+      peerRef.current?.send(JSON.stringify({ type: "screenShare", isScreenSharing: false }));
+    }
   };
 
   const values: Values = {
@@ -341,6 +456,9 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     setSelectedAudioDeviceId,
     selectedVideoDeviceId,
     setSelectedVideoDeviceId,
+    isScreenSharing,
+    isPeerScreenSharing,
+    toggleScreenShare,
   };
 
   return <globalContext.Provider value={values}>{children}</globalContext.Provider>;
