@@ -77,9 +77,11 @@ export default function BottomControls() {
           variant={!isVideoMuted ? "text" : "contained"}>
           {!isVideoMuted ? <VideocamIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} /> : <VideocamOff fontSize={window.innerWidth > 768 ? "large" : "medium"} />}
         </Button>
-        <Button onClick={toggleScreenShare} className="border-2 border-gray-700 border-solid" color={isScreenSharing ? "error" : "primary"} sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }} variant={isScreenSharing ? "contained" : "text"}>
-          {isScreenSharing ? <StopScreenShareIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} /> : <PresentToAllIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />}
-        </Button>
+        <Box sx={{ display: { xs: "none", md: "block" } }}>
+          <Button onClick={toggleScreenShare} className="border-2 border-gray-700 border-solid" color={isScreenSharing ? "error" : "primary"} sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }} variant={isScreenSharing ? "contained" : "text"}>
+            {isScreenSharing ? <StopScreenShareIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} /> : <PresentToAllIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />}
+          </Button>
+        </Box>
         <Button
           sx={{
             p: { xs: 1.5, md: 2 },
@@ -92,7 +94,15 @@ export default function BottomControls() {
           <CallEndIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
         </Button>
 
-        <Button onClick={handleClick} className="border-2 border-gray-700 border-solid" sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }}>
+        <Button
+          onClick={handleClick}
+          className="border-2 border-gray-700 border-solid"
+          sx={{
+            p: { xs: 1.5, md: 2 },
+            borderRadius: "100rem",
+            aspectRatio: 1,
+            display: { xs: "flex", md: "none" }, // Only show on mobile
+          }}>
           <MoreVertIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
         </Button>
 
@@ -108,12 +118,24 @@ export default function BottomControls() {
             vertical: "bottom",
             horizontal: "center",
           }}>
-          <MenuItem onClick={toggleScreenShare}></MenuItem>
+          <MenuItem
+            onClick={() => {
+              toggleScreenShare();
+              handleClose();
+            }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              {isScreenSharing ? <StopScreenShareIcon /> : <PresentToAllIcon />}
+              <span>{isScreenSharing ? "Stop sharing" : "Share screen"}</span>
+            </Box>
+          </MenuItem>
+          <MenuItem onClick={handleClose}>
+            <Settings inMenu={true} />
+          </MenuItem>
         </Menu>
       </Box>
-      {/* Settings (Right) */}
-      <Box>
-        <Settings />
+      {/* Settings - only show on desktop */}
+      <Box sx={{ display: { xs: "none", md: "block" } }}>
+        <Settings inMenu={false} />
       </Box>
     </Box>
   );

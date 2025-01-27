@@ -7,7 +7,11 @@ import { useState } from "react";
 import AudioSettings from "./AudioSettings";
 import VideoSettings from "./VideoSettings";
 
-export default function Settings() {
+interface SettingsProps {
+  inMenu?: boolean;
+}
+
+export default function Settings({ inMenu = false }: SettingsProps) {
   // Global Context
   const { open, setOpen }: Values = useGlobal();
   // Local State
@@ -35,18 +39,27 @@ export default function Settings() {
   return (
     <>
       {/* Trigger */}
-      <Button
-        sx={{
-          p: { xs: 1.5, md: 2 },
-          mr: 3.5,
-          borderRadius: "100%",
-        }}
-        className="border-2 border-gray-700 border-solid"
-        onClick={() => {
-          setOpen(true);
-        }}>
-        <SettingsIcon fontSize="large" />
-      </Button>
+      {inMenu ? (
+        <Box onClick={() => setOpen(true)} sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
+          <SettingsIcon />
+          <span>Settings</span>
+        </Box>
+      ) : (
+        <Box sx={{ display: { xs: "none", md: "block" } }}>
+          <Button
+            sx={{
+              p: { xs: 1.5, md: 2 },
+              mr: 3.5,
+              borderRadius: "100%",
+            }}
+            className="border-2 border-gray-700 border-solid"
+            onClick={() => {
+              setOpen(true);
+            }}>
+            <SettingsIcon fontSize="large" />
+          </Button>
+        </Box>
+      )}
       {/* Modal */}
       <Modal
         open={open}
