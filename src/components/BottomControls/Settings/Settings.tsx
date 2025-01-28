@@ -1,7 +1,7 @@
 import { Values, useGlobal } from "@/globalContext/GlobalContext";
 import CloseIcon from "@mui/icons-material/Close";
 import SettingsIcon from "@mui/icons-material/Settings";
-import { Box, Button, Modal, Paper, Stack, Typography, styled } from "@mui/material";
+import { Box, Button, Modal, Paper, Stack, Tab, Tabs, Typography, styled } from "@mui/material";
 import Grid from "@mui/material/Unstable_Grid2/Grid2";
 import { useState } from "react";
 import AudioSettings from "./AudioSettings";
@@ -11,13 +11,15 @@ interface SettingsProps {
   inMenu?: boolean;
 }
 
+const selectedPanel = [<AudioSettings />, <VideoSettings />];
+
 export default function Settings({ inMenu = false }: SettingsProps) {
   // Global Context
   const { open, setOpen }: Values = useGlobal();
   // Local State
   const [value, setValue] = useState(0);
 
-  const handleChange = (newValue: number) => {
+  const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
   };
 
@@ -47,15 +49,12 @@ export default function Settings({ inMenu = false }: SettingsProps) {
       ) : (
         <Box sx={{ display: { xs: "none", md: "block" } }}>
           <Button
-            sx={{
-              p: { xs: 1.5, md: 2 },
-              mr: 3.5,
-              borderRadius: "100%",
-            }}
+            sx={{ p: { xs: 1.5, md: 2 }, mr: 3.5, borderRadius: "100%" }}
             className="border-2 border-gray-700 border-solid"
             onClick={() => {
               setOpen(true);
-            }}>
+            }}
+          >
             <SettingsIcon fontSize="large" />
           </Button>
         </Box>
@@ -67,7 +66,8 @@ export default function Settings({ inMenu = false }: SettingsProps) {
           setOpen(false);
         }}
         aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description">
+        aria-describedby="modal-modal-description"
+      >
         <Paper
           elevation={4}
           sx={{
@@ -81,13 +81,15 @@ export default function Settings({ inMenu = false }: SettingsProps) {
             maxHeight: "40rem",
             p: 0,
             borderRadius: 4,
-          }}>
+          }}
+        >
           <Grid
             container
             sx={{
               height: "100%",
               flexDirection: { xs: "column", md: "row" },
-            }}>
+            }}
+          >
             <Grid
               xs={12}
               md={4}
@@ -95,66 +97,56 @@ export default function Settings({ inMenu = false }: SettingsProps) {
                 borderRight: { xs: "none", md: "1px solid #323232" },
                 borderBottom: { xs: "1px solid #323232", md: "none" },
                 height: { xs: "auto", md: "100%" },
-                pr: 2,
-              }}>
+                pr: 0,
+              }}
+            >
               <Stack spacing={2}>
-                <Typography
-                  variant="h4"
-                  sx={{
-                    p: 3,
-                    pb: 1,
-                  }}>
+                <Typography variant="h4" sx={{ p: 3, pb: 1 }}>
                   Settings
                 </Typography>
-                <Item
-                  onClick={() => {
-                    handleChange(0);
-                  }}
-                  className="transition-all"
-                  sx={{
-                    backgroundColor: value === 0 ? "#323232" : "transparent",
-                  }}>
+                {/* <Item onClick={() => { handleChange(0); }} className="transition-all" sx={{ backgroundColor: value === 0 ? "#323232" : "transparent", }} >
                   Audio
                 </Item>
-                <Item
-                  onClick={() => {
-                    handleChange(1);
-                  }}
-                  className="transition-all"
-                  sx={{
-                    backgroundColor: value === 1 ? "#323232" : "transparent",
-                  }}>
+                <Item onClick={() => { handleChange(1); }} className="transition-all" sx={{ backgroundColor: value === 1 ? "#323232" : "transparent", }} >
                   Video
-                </Item>
+                </Item> */}
+                <Tabs orientation="vertical" value={value} onChange={handleChange} aria-label="Vertical tabs">
+                  <Tab label="Audio" id={`vertical-tab-${value}`} aria-controls={`vertical-tabpanel-${value}`} sx={{ backgroundColor: value === 0 ? "#323232" : "transparent", py: "1.5rem", px: "1.5rem"  }}/>
+                  <Tab label="Video" id={`vertical-tab-${value}`} aria-controls={`vertical-tabpanel-${value}`} sx={{ backgroundColor: value === 1 ? "#323232" : "transparent", py: "1.5rem", px: "1.5rem"  }}/>
+                </Tabs>
               </Stack>
             </Grid>
-            <Box
-              sx={{
-                display: "flex",
-                flex: 1,
-                flexDirection: "column",
-              }}>
+            <Box sx={{ display: "flex", flex: 1, flexDirection: "column" }}>
               <div className="w-full flex flex-row justify-end h-16">
                 <Button
-                  sx={{
-                    borderRadius: "100rem",
-                  }}
+                  sx={{ borderRadius: "100rem" }}
                   onClick={() => {
                     setOpen(false);
                   }}
                   size="small"
-                  variant="text">
+                  variant="text"
+                >
                   <CloseIcon fontSize="small" />
                 </Button>
               </div>
-              {/* Audio Panel */}
-              <TabPanel value={value} index={0} handleChange={handleChange}>
-                <AudioSettings />
-              </TabPanel>
-              {/* Video Panel */}
-              <TabPanel value={value} index={1} handleChange={handleChange}>
-                <VideoSettings />
-              </TabPanel>
+              {/* Panel */}
+              {/* <div role="tabpanel" id={`simple-tabpanel-${value}`} aria-labelledby={`simple-tab-${value}`}>
+                <Box>{selectedPanel[value]}</Box>
+              </div> */}
+              <div role="tabpanel" hidden={value !== 0} id={`vertical-tabpanel-${0}`} aria-labelledby={`vertical-tab-${0}`}>
+                {value === 0 && (
+                  <Box sx={{ p: 3 }}>
+                    <Box>{selectedPanel[value]}</Box>
+                  </Box>
+                )}
+              </div>
+              <div role="tabpanel" hidden={value !== 1} id={`vertical-tabpanel-${1}`} aria-labelledby={`vertical-tab-${1}`}>
+                {value === 1 && (
+                  <Box sx={{ p: 3 }}>
+                    <Box>{selectedPanel[value]}</Box>
+                  </Box>
+                )}
+              </div>
             </Box>
           </Grid>
         </Paper>
@@ -162,13 +154,3 @@ export default function Settings({ inMenu = false }: SettingsProps) {
     </>
   );
 }
-
-const TabPanel = (props: any) => {
-  const { children, value, index, handleChange, ...other } = props;
-
-  return (
-    <div role="tabpanel" hidden={value !== index} id={`simple-tabpanel-${index}`} aria-labelledby={`simple-tab-${index}`} {...other}>
-      {value === index && <Box>{children}</Box>}
-    </div>
-  );
-};

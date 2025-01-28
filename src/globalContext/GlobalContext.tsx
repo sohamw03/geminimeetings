@@ -91,8 +91,8 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
 
     navigator.mediaDevices
       .getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, deviceId: audioDeviceId ? { exact: audioDeviceId } : undefined },
-        video: { width: 1280, height: 720, frameRate: 30, deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined },
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, voiceIsolation: true, deviceId: audioDeviceId ? { exact: audioDeviceId } : undefined } as any,
+        video: { width: { ideal: 1920 }, height:{ ideal: 1080 }, frameRate: { ideal: 60 }, deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined },
       })
       .then((stream) => {
         userStreamRef.current = stream;

@@ -9,8 +9,8 @@ export default function VideoCard({ mode }: { mode: "user" | "peer" }) {
   switch (mode) {
     case "user":
       return (
-        <Paper elevation={3} className="fixed bottom-36 right-4 md:right-4 rounded-xl cursor-pointer w-[40vw] md:w-[25rem] aspect-video z-10">
-          <video autoPlay playsInline controls={false} ref={userVideoRef as LegacyRef<HTMLVideoElement>} className="aspect-video w-full h-full rounded-xl -scale-x-100" muted />
+        <Paper elevation={3} className="fixed bottom-[9.15rem] right-4 md:right-4 rounded-lg cursor-pointer w-[40vw] md:w-[25rem] aspect-video overflow-hidden z-10">
+          <video autoPlay playsInline controls={false} ref={userVideoRef as LegacyRef<HTMLVideoElement>} className="aspect-video w-full h-full -scale-x-100" muted />
         </Paper>
       );
     case "peer":
