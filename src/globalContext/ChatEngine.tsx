@@ -9,7 +9,7 @@ export type Message = {
 };
 
 export class ChatEngine {
-  private MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB limit
+  private MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB limit
   private MAX_CHUNK_SIZE = this.getOptimalChunkSize();
   private MAX_CONCURRENT_CHUNKS = this.getOptimalConcurrentChunks();
   private CHUNK_DELAY = 50;
