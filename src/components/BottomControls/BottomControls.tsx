@@ -10,15 +10,18 @@ import PresentToAllIcon from "@mui/icons-material/PresentToAll";
 import ShieldIcon from "@mui/icons-material/Shield";
 import StopScreenShareIcon from "@mui/icons-material/StopScreenShare";
 import VideocamIcon from "@mui/icons-material/Videocam";
+import ChatIcon from "@mui/icons-material/Chat";
 import { Box, Button, Menu, MenuItem } from "@mui/material";
 import { useState } from "react";
 import Settings from "./Settings/Settings";
+import Chat from "../Chat/Chat";
 
 export default function BottomControls() {
   // Global Context
   const { leaveRoom, toggleAudioMute, toggleVideoMute, isAudioMuted, isVideoMuted, isScreenSharing, toggleScreenShare }: Values = useGlobal();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
+  const [showChat, setShowChat] = useState(false);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -37,8 +40,7 @@ export default function BottomControls() {
         width: "100%",
         height: "100%",
         px: { xs: 1, md: 0 },
-      }}
-    >
+      }}>
       {/* Placeholder (Left) */}
       <Box>
         <Button
@@ -46,8 +48,7 @@ export default function BottomControls() {
           sx={{
             ml: { xs: 1, md: 3.5 },
             display: { md: "flex" },
-          }}
-        >
+          }}>
           <ShieldIcon fontSize="large" />
         </Button>
       </Box>
@@ -58,8 +59,7 @@ export default function BottomControls() {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-        }}
-      >
+        }}>
         <Button
           onClick={() => {
             toggleAudioMute();
@@ -67,13 +67,8 @@ export default function BottomControls() {
           className="border-2 border-gray-700 border-solid"
           color={!isAudioMuted ? "primary" : "error"}
           sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }}
-          variant={!isAudioMuted ? "text" : "contained"}
-        >
-          {!isAudioMuted ? (
-            <MicIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
-          ) : (
-            <MicOffIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
-          )}
+          variant={!isAudioMuted ? "text" : "contained"}>
+          {!isAudioMuted ? <MicIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} /> : <MicOffIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />}
         </Button>
         <Button
           onClick={() => {
@@ -82,29 +77,17 @@ export default function BottomControls() {
           className="border-2 border-gray-700 border-solid"
           color={!isVideoMuted ? "primary" : "error"}
           sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }}
-          variant={!isVideoMuted ? "text" : "contained"}
-        >
-          {!isVideoMuted ? (
-            <VideocamIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
-          ) : (
-            <VideocamOff fontSize={window.innerWidth > 768 ? "large" : "medium"} />
-          )}
+          variant={!isVideoMuted ? "text" : "contained"}>
+          {!isVideoMuted ? <VideocamIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} /> : <VideocamOff fontSize={window.innerWidth > 768 ? "large" : "medium"} />}
         </Button>
         <Box sx={{ display: { xs: "none", md: "block" } }}>
-          <Button
-            onClick={toggleScreenShare}
-            className="border-2 border-gray-700 border-solid"
-            color={isScreenSharing ? "error" : "primary"}
-            sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }}
-            variant={isScreenSharing ? "contained" : "text"}
-          >
-            {isScreenSharing ? (
-              <StopScreenShareIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
-            ) : (
-              <PresentToAllIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
-            )}
+          <Button onClick={toggleScreenShare} className="border-2 border-gray-700 border-solid" color={isScreenSharing ? "error" : "primary"} sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }} variant={isScreenSharing ? "contained" : "text"}>
+            {isScreenSharing ? <StopScreenShareIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} /> : <PresentToAllIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />}
           </Button>
         </Box>
+        <Button onClick={() => setShowChat(!showChat)} className="border-2 border-gray-700 border-solid" sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }}>
+          <ChatIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
+        </Button>
         <Button
           sx={{
             p: { xs: 1.5, md: 2 },
@@ -113,8 +96,7 @@ export default function BottomControls() {
           }}
           color="error"
           onClick={leaveRoom}
-          variant="contained"
-        >
+          variant="contained">
           <CallEndIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
         </Button>
 
@@ -129,14 +111,12 @@ export default function BottomControls() {
           transformOrigin={{
             vertical: "bottom",
             horizontal: "center",
-          }}
-        >
+          }}>
           <MenuItem
             onClick={() => {
               toggleScreenShare();
               handleClose();
-            }}
-          >
+            }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               {isScreenSharing ? <StopScreenShareIcon /> : <PresentToAllIcon />}
               <span>{isScreenSharing ? "Stop sharing" : "Share screen"}</span>
@@ -146,6 +126,7 @@ export default function BottomControls() {
             <Settings inMenu={true} />
           </MenuItem>
         </Menu>
+        {showChat && <Chat onClose={() => setShowChat(false)} />}
       </Box>
       {/* Settings - only show on desktop */}
       <Box>
@@ -157,8 +138,7 @@ export default function BottomControls() {
             borderRadius: "100rem",
             aspectRatio: 1,
             display: { xs: "flex", md: "none" }, // Only show on mobile
-          }}
-        >
+          }}>
           <MoreVertIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
         </Button>
         <Settings inMenu={false} />

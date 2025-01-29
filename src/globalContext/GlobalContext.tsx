@@ -28,6 +28,9 @@ export interface Values {
   isScreenSharing: boolean;
   isPeerScreenSharing: boolean; // Add this line
   toggleScreenShare: () => Promise<void>;
+  messages: Array<{ type: "text" | "file"; content: string; sender: "me" | "peer"; fileName?: string }>;
+  sendMessage: (message: string) => void;
+  sendFile: (file: File, onProgress?: (progress: number) => void) => Promise<void>;
 }
 
 const globalContext = createContext<Values>({} as Values);
@@ -44,6 +47,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const [selectedVideoDeviceId, setSelectedVideoDeviceId] = useState<string | null>(null);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isPeerScreenSharing, setIsPeerScreenSharing] = useState(false);
+  const [messages, setMessages] = useState<Values["messages"]>([]);
 
   const userVideoRef = useRef<HTMLVideoElement | undefined | null | any>();
   const peerVideoRef = useRef<HTMLVideoElement | undefined | null | any>();
@@ -53,6 +57,22 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const hostRef = useRef<boolean>(false);
   const screenStreamRef = useRef<MediaStream>();
   const wasVideoEnabledBeforeScreenShare = useRef<boolean>(false); // Add this line
+  const MAX_CHUNK_SIZE = 16 * 1024; // 16KB chunks (reduced from 256KB)
+  const MAX_CONCURRENT_CHUNKS = 3; // Reduced from 5 to prevent buffer overflow
+  const CHUNK_DELAY = 50; // Increased delay between chunks to 50ms
+  const MAX_RETRIES = 3;
+  const CHUNK_TIMEOUT = 10000; // 10 seconds timeout per chunk
+  const MAX_FILE_SIZE = 5000 * 1024 * 1024; // 5000MB
+  const fileChunksRef = useRef<{ [key: string]: { chunks: (string | null)[]; total: number } }>({});
+  const transfersRef = useRef<{
+    [fileId: string]: {
+      chunks: (ArrayBuffer | null)[];
+      pieces: { [index: number]: (ArrayBuffer | null)[] }; // Store pieces of chunks
+      total: number;
+      received: Set<number>;
+      timeouts: { [index: number]: NodeJS.Timeout };
+    };
+  }>({});
 
   const toggleAudioMute = (options?: { noUIToggle?: boolean; forceState?: boolean }) => {
     if (userStreamRef.current) {
@@ -92,7 +112,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     navigator.mediaDevices
       .getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, voiceIsolation: true, deviceId: audioDeviceId ? { exact: audioDeviceId } : undefined } as any,
-        video: { width: { ideal: 1920 }, height:{ ideal: 1080 }, frameRate: { ideal: 60 }, deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined },
+        video: { width: 1280, height: 720, frameRate: 30, deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined },
       })
       .then((stream) => {
         userStreamRef.current = stream;
@@ -237,6 +257,72 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
           const message = JSON.parse(data.toString());
           if (message.type === "screenShare") {
             setIsPeerScreenSharing(message.isScreenSharing);
+          } else if (message.type === "file-chunk") {
+            // Handle file chunk
+            const { fileId, chunk, index, total, fileName, pieceIndex, totalPieces } = message;
+
+            // Initialize transfer tracking if needed
+            if (!transfersRef.current[fileId]) {
+              transfersRef.current[fileId] = {
+                chunks: Array(total).fill(null),
+                pieces: {}, // Store pieces of chunks
+                total,
+                received: new Set(),
+                timeouts: {},
+              };
+            }
+
+            const transfer = transfersRef.current[fileId];
+
+            // Initialize pieces array for this chunk if needed
+            if (!transfer.pieces[index]) {
+              transfer.pieces[index] = Array(totalPieces).fill(null);
+            }
+
+            // Store piece
+            const chunkBuffer = Uint8Array.from(atob(chunk), (c) => c.charCodeAt(0)).buffer;
+            transfer.pieces[index][pieceIndex] = chunkBuffer;
+
+            // Check if all pieces of this chunk are received
+            if (!transfer.pieces[index].includes(null)) {
+              // Combine pieces into complete chunk
+              const validPieces = transfer.pieces[index].filter((piece): piece is ArrayBuffer => piece !== null);
+              const completeChunk = concatenateArrayBuffers(validPieces);
+              transfer.chunks[index] = completeChunk;
+              transfer.received.add(index);
+              delete transfer.pieces[index]; // Clean up pieces
+
+              // Send acknowledgment
+              peerRef.current?.send(
+                JSON.stringify({
+                  type: "chunk-ack",
+                  fileId,
+                  index,
+                })
+              );
+
+              // Check if transfer is complete
+              if (transfer.received.size === total) {
+                const validChunks = transfer.chunks.filter((chunk): chunk is ArrayBuffer => chunk !== null);
+                const blob = new Blob(validChunks);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  setMessages((prev) => [
+                    ...prev,
+                    {
+                      type: "file",
+                      content: e.target?.result as string,
+                      fileName,
+                      sender: "peer",
+                    },
+                  ]);
+                };
+                reader.readAsDataURL(blob);
+                delete transfersRef.current[fileId];
+              }
+            }
+          } else if (message.type === "chat") {
+            setMessages((prev) => [...prev, { ...message, sender: "peer" }]);
           }
         });
 
@@ -261,6 +347,72 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
           const message = JSON.parse(data.toString());
           if (message.type === "screenShare") {
             setIsPeerScreenSharing(message.isScreenSharing);
+          } else if (message.type === "file-chunk") {
+            // Handle file chunk
+            const { fileId, chunk, index, total, fileName, pieceIndex, totalPieces } = message;
+
+            // Initialize transfer tracking if needed
+            if (!transfersRef.current[fileId]) {
+              transfersRef.current[fileId] = {
+                chunks: Array(total).fill(null),
+                pieces: {}, // Store pieces of chunks
+                total,
+                received: new Set(),
+                timeouts: {},
+              };
+            }
+
+            const transfer = transfersRef.current[fileId];
+
+            // Initialize pieces array for this chunk if needed
+            if (!transfer.pieces[index]) {
+              transfer.pieces[index] = Array(totalPieces).fill(null);
+            }
+
+            // Store piece
+            const chunkBuffer = Uint8Array.from(atob(chunk), (c) => c.charCodeAt(0)).buffer;
+            transfer.pieces[index][pieceIndex] = chunkBuffer;
+
+            // Check if all pieces of this chunk are received
+            if (!transfer.pieces[index].includes(null)) {
+              // Combine pieces into complete chunk
+              const validPieces = transfer.pieces[index].filter((piece): piece is ArrayBuffer => piece !== null);
+              const completeChunk = concatenateArrayBuffers(validPieces);
+              transfer.chunks[index] = completeChunk;
+              transfer.received.add(index);
+              delete transfer.pieces[index]; // Clean up pieces
+
+              // Send acknowledgment
+              peerRef.current?.send(
+                JSON.stringify({
+                  type: "chunk-ack",
+                  fileId,
+                  index,
+                })
+              );
+
+              // Check if transfer is complete
+              if (transfer.received.size === total) {
+                const validChunks = transfer.chunks.filter((chunk): chunk is ArrayBuffer => chunk !== null);
+                const blob = new Blob(validChunks);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  setMessages((prev) => [
+                    ...prev,
+                    {
+                      type: "file",
+                      content: e.target?.result as string,
+                      fileName,
+                      sender: "peer",
+                    },
+                  ]);
+                };
+                reader.readAsDataURL(blob);
+                delete transfersRef.current[fileId];
+              }
+            }
+          } else if (message.type === "chat") {
+            setMessages((prev) => [...prev, { ...message, sender: "peer" }]);
           }
         });
 
@@ -435,6 +587,125 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     }
   };
 
+  const sendChunk = async (peer: SimplePeer.Instance, fileId: string, chunk: ArrayBuffer, index: number, total: number, fileName: string, retries = 0): Promise<void> => {
+    try {
+      // Split large chunks into smaller pieces if needed
+      const maxSize = 16 * 1024; // 16KB maximum message size
+      const uint8Array = new Uint8Array(chunk);
+      const numPieces = Math.ceil(uint8Array.length / maxSize);
+
+      for (let i = 0; i < numPieces; i++) {
+        const start = i * maxSize;
+        const end = Math.min(start + maxSize, uint8Array.length);
+        const piece = uint8Array.slice(start, end);
+
+        const chunkData = {
+          type: "file-chunk",
+          fileId,
+          chunk: btoa(String.fromCharCode.apply(null, Array.from(piece))),
+          index,
+          total,
+          fileName,
+          pieceIndex: i,
+          totalPieces: numPieces,
+        };
+
+        peer.send(JSON.stringify(chunkData));
+
+        // Small delay between pieces
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+
+      // Wait for acknowledgment
+      await Promise.race([
+        new Promise<void>((resolve, reject) => {
+          const handler = (data: any) => {
+            const message = JSON.parse(data.toString());
+            if (message.type === "chunk-ack" && message.fileId === fileId && message.index === index) {
+              peer.off("data", handler);
+              resolve();
+            }
+          };
+          peer.on("data", handler);
+        }),
+        new Promise<void>((_, reject) => setTimeout(() => reject(new Error("Chunk timeout")), CHUNK_TIMEOUT)),
+      ]);
+    } catch (err) {
+      if (retries < MAX_RETRIES) {
+        await new Promise((resolve) => setTimeout(resolve, 500 * (retries + 1)));
+        return sendChunk(peer, fileId, chunk, index, total, fileName, retries + 1);
+      }
+      throw err;
+    }
+  };
+
+  const sendFile = async (file: File, onProgress?: (progress: number) => void) => {
+    if (!peerRef.current) throw new Error("No peer connection");
+
+    const fileId = Math.random().toString(36).substring(7);
+    const chunks: ArrayBuffer[] = [];
+    const chunkSize = MAX_CHUNK_SIZE;
+    const totalChunks = Math.ceil(file.size / chunkSize);
+
+    // Split file into chunks
+    for (let i = 0; i < file.size; i += chunkSize) {
+      const chunk = await file.slice(i, i + chunkSize).arrayBuffer();
+      chunks.push(chunk);
+    }
+
+    // Send chunks with parallel processing
+    let sentChunks = 0;
+    try {
+      // Process chunks in batches
+      for (let i = 0; i < chunks.length; i += MAX_CONCURRENT_CHUNKS) {
+        const batch = chunks.slice(i, i + MAX_CONCURRENT_CHUNKS);
+        await Promise.all(
+          batch.map(async (chunk, index) => {
+            const chunkIndex = i + index;
+            await sendChunk(peerRef.current!, fileId, chunk, chunkIndex, totalChunks, file.name);
+            sentChunks++;
+            onProgress?.(Math.round((sentChunks / totalChunks) * 100));
+          })
+        );
+        // Small delay between batches to prevent flooding
+        await new Promise((resolve) => setTimeout(resolve, CHUNK_DELAY));
+      }
+
+      // All chunks sent successfully, add to messages
+      const fileReader = new FileReader();
+      fileReader.onload = (e) => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            type: "file",
+            content: e.target?.result as string,
+            fileName: file.name,
+            sender: "me",
+          },
+        ]);
+      };
+      fileReader.readAsDataURL(file);
+    } catch (err: any) {
+      throw new Error(`Failed to send file: ${err.message}`);
+    }
+  };
+
+  const sendMessage = (message: string) => {
+    setMessages((prev) => [...prev, { type: "text", content: message, sender: "me" }]);
+    peerRef.current?.send(JSON.stringify({ type: "chat", content: message }));
+  };
+
+  const concatenateArrayBuffers = (buffers: ArrayBuffer[]): ArrayBuffer => {
+    const totalLength = buffers.reduce((acc, buf) => acc + buf.byteLength, 0);
+    const result = new Uint8Array(totalLength);
+    let offset = 0;
+    buffers.forEach((buffer) => {
+      result.set(new Uint8Array(buffer), offset);
+      offset += buffer.byteLength;
+    });
+    return result.buffer;
+  };
+
   const values: Values = {
     userVideoRef,
     peerVideoRef,
@@ -459,6 +730,9 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     isScreenSharing,
     isPeerScreenSharing,
     toggleScreenShare,
+    messages,
+    sendMessage,
+    sendFile,
   };
 
   return <globalContext.Provider value={values}>{children}</globalContext.Provider>;
