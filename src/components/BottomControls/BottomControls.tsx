@@ -12,7 +12,7 @@ import StopScreenShareIcon from "@mui/icons-material/StopScreenShare";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import ChatIcon from "@mui/icons-material/Chat";
 import { Box, Button, Menu, MenuItem } from "@mui/material";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Settings from "./Settings/Settings";
 import Chat from "../Chat/Chat";
 
@@ -30,6 +30,14 @@ export default function BottomControls() {
   const handleClose = () => {
     setAnchorEl(null);
   };
+
+  useEffect(() => {
+    window.onmessage = (e) => {
+      if (e.data === "showChat" && e.origin === window.location.origin) {
+        setShowChat(true);
+      }
+    };
+  }, []);
 
   return (
     <Box
@@ -80,12 +88,14 @@ export default function BottomControls() {
           variant={!isVideoMuted ? "text" : "contained"}>
           {!isVideoMuted ? <VideocamIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} /> : <VideocamOff fontSize={window.innerWidth > 768 ? "large" : "medium"} />}
         </Button>
+        {/* Screen Share Button */}
         <Box sx={{ display: { xs: "none", md: "block" } }}>
           <Button onClick={toggleScreenShare} className="border-2 border-gray-700 border-solid" color={isScreenSharing ? "error" : "primary"} sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }} variant={isScreenSharing ? "contained" : "text"}>
             {isScreenSharing ? <StopScreenShareIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} /> : <PresentToAllIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />}
           </Button>
         </Box>
-        <Button onClick={() => setShowChat(!showChat)} className="border-2 border-gray-700 border-solid" sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }}>
+        {/* Chat Button */}
+        <Button onClick={() => setShowChat(!showChat)} className="border-2 border-gray-700 border-solid" sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1, display: { xs: "none", md: "block" } }}>
           <ChatIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
         </Button>
         <Button
@@ -112,6 +122,16 @@ export default function BottomControls() {
             vertical: "bottom",
             horizontal: "center",
           }}>
+          <MenuItem
+            onClick={() => {
+              setShowChat(!showChat);
+              handleClose();
+            }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <ChatIcon />
+              <span>Chat</span>
+            </Box>
+          </MenuItem>
           <MenuItem
             onClick={() => {
               toggleScreenShare();
