@@ -27,27 +27,27 @@ export default function SocketHandler(req, res) {
         socket.join(roomName);
         roomHosts.set(roomName, socket.id); // Set initial host
         socket.emit("created", { isHost: true });
+        console.log(`Room ${roomName} created by ${socket.id}`);
       } else if (room.size === 1) {
         // If room.size == 1 when the room has one person already.
         socket.join(roomName);
-        const isHost = !roomHosts.has(roomName); // If no host exists, become host
-        if (isHost) {
-          roomHosts.set(roomName, socket.id);
-        }
+        const isHost = false; // Second person is never host
         socket.emit("joined", { isHost });
+        console.log(`Peer ${socket.id} joined room ${roomName}`);
       } else {
         // When there are already two people in the room.
         socket.emit("full");
       }
-      console.log("Rooms:", rooms);
-      console.log("Hosts:", roomHosts);
+      console.log(`Room ${roomName} status:`, {
+        size: room ? room.size : 1,
+        host: roomHosts.get(roomName),
+      });
     });
 
-    // Triggered when the person who joined the room is ready to communicate.
     socket.on("ready", (roomName) => {
-      console.log("on: ready, roomName: ", roomName);
-      socket.broadcast.to(roomName).emit("ready");
-      console.log(`broadcast to: ${roomName} ready`);
+      console.log(`Peer ${socket.id} is ready in room ${roomName}`);
+      // Emit ready event to all peers in the room
+      io.in(roomName).emit("ready");
     });
 
     // Triggered when server gets an icecandidate from a peer in the room.
@@ -59,16 +59,14 @@ export default function SocketHandler(req, res) {
 
     // Triggered when server gets an offer from a peer in the room.
     socket.on("offer", (offer, roomName) => {
-      console.log("on: offer, roomName: ", roomName);
-      socket.broadcast.to(roomName).emit("offer", offer); // Sends offer to the other peer in the room.
-      console.log(`broadcast to: ${roomName} offer`);
+      console.log(`Offer from ${socket.id} in room ${roomName}`);
+      socket.to(roomName).emit("offer", offer);
     });
 
     // Triggered when server gets an answer from a peer in the room.
     socket.on("answer", (answer, roomName) => {
-      console.log("on: answer, roomName: ", roomName);
-      socket.broadcast.to(roomName).emit("answer", answer); // Sends answer to the other peer in the room.
-      console.log(`broadcast to: ${roomName} answer`);
+      console.log(`Answer from ${socket.id} in room ${roomName}`);
+      socket.to(roomName).emit("answer", answer);
     });
 
     socket.on("leave", (roomName) => {
@@ -79,7 +77,7 @@ export default function SocketHandler(req, res) {
         const room = io.sockets.adapter.rooms.get(roomName);
         if (room && room.size > 1) {
           // Get the other peer in the room
-          const remainingPeer = Array.from(room).find(id => id !== socket.id);
+          const remainingPeer = Array.from(room).find((id) => id !== socket.id);
           if (remainingPeer) {
             roomHosts.set(roomName, remainingPeer);
             io.to(remainingPeer).emit("host_changed", { isHost: true });

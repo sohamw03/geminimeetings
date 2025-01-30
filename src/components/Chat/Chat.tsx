@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import CircularProgress from "@mui/material/CircularProgress";
 
 export default function Chat({ onClose }: { onClose: () => void }) {
-  const { messages, sendMessage, sendFile } = useGlobal();
+  const { messages, sendMessage, sendFile, peerUsername } = useGlobal();
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -80,7 +80,7 @@ export default function Chat({ onClose }: { onClose: () => void }) {
                 color: "text.secondary",
                 display: "block",
               }}>
-              {msg.sender === "me" ? "You" : "Peer"}
+              {msg.sender === "me" ? "You" : peerUsername || "Peer"}
             </Typography>
             <Box
               sx={{

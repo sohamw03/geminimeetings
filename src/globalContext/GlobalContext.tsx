@@ -32,6 +32,10 @@ export interface Values {
   messages: Array<{ type: "text" | "file"; content: string; sender: "me" | "peer"; fileName?: string }>;
   sendMessage: (message: string) => void;
   sendFile: (file: File, onProgress?: (progress: number) => void) => Promise<void>;
+  username: string;
+  setUsername: React.Dispatch<React.SetStateAction<string>>;
+  peerUsername: string;
+  setPeerUsername: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const globalContext = createContext<Values>({} as Values);
@@ -49,6 +53,8 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isPeerScreenSharing, setIsPeerScreenSharing] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [username, setUsername] = useState<string>("");
+  const [peerUsername, setPeerUsername] = useState<string>("");
   const chatEngineRef = useRef<ChatEngine>();
 
   const userVideoRef = useRef<HTMLVideoElement | undefined | null | any>();
@@ -224,9 +230,13 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     });
 
     socketRef.current.on("joined", ({ isHost }) => {
+      console.log("Joined room as:", isHost ? "host" : "peer");
       hostRef.current = isHost;
       initOrRefreshMediaStream("init");
-      socketRef.current?.emit("ready", localRoomName);
+      // Emit ready after media stream is initialized
+      setTimeout(() => {
+        socketRef.current?.emit("ready", localRoomName);
+      }, 1000);
     });
 
     socketRef.current.on("host_changed", ({ isHost }) => {
@@ -242,6 +252,8 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
         const message = JSON.parse(data.toString());
         if (message.type === "screenShare") {
           setIsPeerScreenSharing(message.isScreenSharing);
+        } else if (message.type === "username") {
+          setPeerUsername(message.username);
         } else {
           chatEngineRef.current?.handleIncomingData(data.toString());
         }
@@ -257,30 +269,64 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     };
 
     socketRef.current.on("ready", () => {
+      console.log("Ready event received, hostRef:", hostRef.current);
       if (hostRef.current && userStreamRef.current) {
-        peerRef.current = new SimplePeer({ initiator: true, stream: userStreamRef.current, trickle: false });
+        console.log("Creating peer as initiator");
+        if (peerRef.current) {
+          peerRef.current.destroy();
+        }
+
+        peerRef.current = new SimplePeer({
+          initiator: true,
+          stream: userStreamRef.current,
+          trickle: false,
+        });
+
         setupPeerEventHandlers(peerRef.current);
 
         peerRef.current.on("signal", (data) => {
+          console.log("Host sending offer");
           socketRef.current?.emit("offer", data, localRoomName);
         });
+
+        peerRef.current?.on("connect", () => {
+          peerRef.current?.send(JSON.stringify({ type: "username", username }));
+        });
+      } else if (!hostRef.current && userStreamRef.current) {
+        console.log("Non-host peer is ready to receive offer");
       }
     });
 
     socketRef.current.on("offer", (offer) => {
+      console.log("Received offer, creating peer");
       if (!hostRef.current && userStreamRef.current) {
-        peerRef.current = new SimplePeer({ initiator: false, stream: userStreamRef.current, trickle: false });
+        if (peerRef.current) {
+          peerRef.current.destroy();
+        }
+
+        peerRef.current = new SimplePeer({
+          initiator: false,
+          stream: userStreamRef.current,
+          trickle: false,
+        });
+
         setupPeerEventHandlers(peerRef.current);
 
         peerRef.current.on("signal", (data) => {
+          console.log("Peer sending answer");
           socketRef.current?.emit("answer", data, localRoomName);
         });
 
         peerRef.current.signal(offer);
+
+        peerRef.current?.on("connect", () => {
+          peerRef.current?.send(JSON.stringify({ type: "username", username }));
+        });
       }
     });
 
     socketRef.current.on("answer", (answer) => {
+      console.log("Received answer, signaling peer");
       peerRef.current?.signal(answer);
     });
 
@@ -474,6 +520,10 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     messages,
     sendMessage,
     sendFile,
+    username,
+    setUsername,
+    peerUsername,
+    setPeerUsername,
   };
 
   return <globalContext.Provider value={values}>{children}</globalContext.Provider>;

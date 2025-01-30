@@ -1,20 +1,20 @@
 "use client";
 
 import { Values, useGlobal } from "@/globalContext/GlobalContext";
-import { VideocamOff } from "@mui/icons-material";
+import { Share, VideocamOff } from "@mui/icons-material";
 import CallEndIcon from "@mui/icons-material/CallEnd";
+import ChatIcon from "@mui/icons-material/Chat";
 import MicIcon from "@mui/icons-material/Mic";
 import MicOffIcon from "@mui/icons-material/MicOff";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PresentToAllIcon from "@mui/icons-material/PresentToAll";
-import ShieldIcon from "@mui/icons-material/Shield";
 import StopScreenShareIcon from "@mui/icons-material/StopScreenShare";
 import VideocamIcon from "@mui/icons-material/Videocam";
-import ChatIcon from "@mui/icons-material/Chat";
 import { Box, Button, Menu, MenuItem } from "@mui/material";
 import { useEffect, useState } from "react";
-import Settings from "./Settings/Settings";
 import Chat from "../Chat/Chat";
+import ShareModal from "../Share/ShareModal";
+import Settings from "./Settings/Settings";
 
 export default function BottomControls() {
   // Global Context
@@ -22,6 +22,7 @@ export default function BottomControls() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const [showChat, setShowChat] = useState(false);
+  const [showShare, setShowShare] = useState(false);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -51,13 +52,8 @@ export default function BottomControls() {
       }}>
       {/* Placeholder (Left) */}
       <Box>
-        <Button
-          disabled
-          sx={{
-            ml: { xs: 1, md: 3.5 },
-            display: { md: "flex" },
-          }}>
-          <ShieldIcon fontSize="large" />
+        <Button onClick={() => setShowShare(true)} className="border-2 border-gray-700 border-solid" sx={{ ml: { xs: 1, md: 3.5 }, p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }}>
+          <Share fontSize={window.innerWidth > 768 ? "large" : "medium"} />
         </Button>
       </Box>
       {/* Media Controls (Center) */}
@@ -146,7 +142,6 @@ export default function BottomControls() {
             <Settings inMenu={true} />
           </MenuItem>
         </Menu>
-        {showChat && <Chat onClose={() => setShowChat(false)} />}
       </Box>
       {/* Settings - only show on desktop */}
       <Box>
@@ -163,6 +158,9 @@ export default function BottomControls() {
         </Button>
         <Settings inMenu={false} />
       </Box>
+      {/* Detached Full Screen Modals */}
+      {showChat && <Chat onClose={() => setShowChat(false)} />}
+      <ShareModal open={showShare} onClose={() => setShowShare(false)} />
     </Box>
   );
 }

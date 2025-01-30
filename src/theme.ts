@@ -1,13 +1,17 @@
 "use client";
-import { IBM_Plex_Sans } from "next/font/google";
-import { createTheme } from "@mui/material/styles";
 import { grey } from "@mui/material/colors";
+import { createTheme } from "@mui/material/styles";
+import { Russo_One } from "next/font/google";
 
-const ibm_plex_sans = IBM_Plex_Sans({
-  //
+const russo_one = Russo_One({
   subsets: ["cyrillic"],
-  weight: ["100", "200", "300", "400", "500", "600", "700"],
+  weight: ["400"],
 });
+
+// const bakbak_one = Bakbak_One({
+//   subsets: ["latin-ext"],
+//   weight: ["400"],
+// });
 
 const theme = createTheme({
   palette: {
@@ -17,7 +21,7 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: ibm_plex_sans.style.fontFamily,
+    fontFamily: russo_one.style.fontFamily,
   },
   components: {
     MuiAlert: {

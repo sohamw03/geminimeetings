@@ -1,9 +1,8 @@
-// import { GlobalContextProvider } from "@/contextWithDrivers/GlobalContext";
+import { GlobalContextProvider } from "@/globalContext/GlobalContext";
 import theme from "@/theme";
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import type { Metadata } from "next";
 import "./globals.css";
-import { GlobalContextProvider } from "@/globalContext/GlobalContext";
 
 export const metadata: Metadata = {
   title: "GeminiMeetings",
