@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import SimplePeer from "simple-peer";
 import { Socket, io } from "socket.io-client";
 import { ChatEngine, Message } from "./ChatEngine";
+import { useRouter } from "next/navigation";
 
 export interface Values {
   userVideoRef: React.RefObject<HTMLVideoElement | undefined | null>;
@@ -55,6 +56,8 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const [messages, setMessages] = useState<Message[]>([]);
   const [username, setUsername] = useState<string>("");
   const [peerUsername, setPeerUsername] = useState<string>("");
+
+  const router = useRouter();
   const chatEngineRef = useRef<ChatEngine>();
 
   const userVideoRef = useRef<HTMLVideoElement | undefined | null | any>();
@@ -336,7 +339,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     });
 
     socketRef.current.on("full", () => {
-      window.location.href = "/";
+      router.replace("/");
     });
   };
 
@@ -399,7 +402,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
       socketRef.current = undefined;
     }
 
-    window.location.assign("/");
+    router.replace("/");
   };
 
   const toggleScreenShare = async () => {
