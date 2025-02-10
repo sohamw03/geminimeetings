@@ -3,7 +3,7 @@
 import BottomControls from "@/components/BottomControls/BottomControls";
 import VideoCard from "@/components/VideoCard";
 import { Values, useGlobal } from "@/globalContext/GlobalContext";
-import { Box, SxProps } from "@mui/material";
+import { Box, Fade, SxProps } from "@mui/material";
 import { useEffect } from "react";
 
 export default function Room({ params }: { params: { roomName: string } }) {
@@ -17,13 +17,15 @@ export default function Room({ params }: { params: { roomName: string } }) {
   }, []);
 
   return (
-    <Box sx={styles.main}>
-      <Box sx={styles.videoContainer}>
-        <VideoCard mode="peer" />
+    <Fade in timeout={1000}>
+      <Box sx={styles.main}>
+        <Box sx={styles.videoContainer}>
+          <VideoCard mode="peer" />
+        </Box>
+        <VideoCard mode="user" />
+        <BottomControls />
       </Box>
-      <VideoCard mode="user" />
-      <BottomControls />
-    </Box>
+    </Fade>
   );
 }
 

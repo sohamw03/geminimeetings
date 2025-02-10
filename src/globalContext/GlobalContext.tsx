@@ -402,7 +402,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
       socketRef.current = undefined;
     }
 
-    router.replace("/");
+    router.replace("/?ended=true&lastId=" + roomName + "&name=" + username);
   };
 
   const toggleScreenShare = async () => {

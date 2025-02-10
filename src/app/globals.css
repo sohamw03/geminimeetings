@@ -18,12 +18,13 @@
 
 body {
     color: rgb(var(--foreground-rgb));
-    background-color: #1e1e1e;
+    background-color: #1e1e1e!important;
 }
 
 .MuiTabs-indicator {
     background-color: transparent !important;
 }
+
 .MuiButtonBase-root[role="tab"] {
     text-transform: unset !important;
     font: inherit !important;

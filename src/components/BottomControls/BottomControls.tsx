@@ -52,7 +52,7 @@ export default function BottomControls() {
       }}>
       {/* Placeholder (Left) */}
       <Box>
-        <Button onClick={() => setShowShare(true)} className="border-2 border-gray-700 border-solid" sx={{ ml: { xs: 1, md: 3.5 }, p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }}>
+        <Button onClick={() => setShowShare(true)} sx={{ ml: { xs: 1, md: 3.5 }, p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1, border: 2, borderColor: "grey.800" }}>
           <Share fontSize={window.innerWidth > 768 ? "large" : "medium"} />
         </Button>
       </Box>
@@ -68,9 +68,8 @@ export default function BottomControls() {
           onClick={() => {
             toggleAudioMute();
           }}
-          className="border-2 border-gray-700 border-solid"
           color={!isAudioMuted ? "primary" : "error"}
-          sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }}
+          sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1, border: 2, borderColor: "grey.800" }}
           variant={!isAudioMuted ? "text" : "contained"}>
           {!isAudioMuted ? <MicIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} /> : <MicOffIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />}
         </Button>
@@ -78,20 +77,19 @@ export default function BottomControls() {
           onClick={() => {
             toggleVideoMute();
           }}
-          className="border-2 border-gray-700 border-solid"
           color={!isVideoMuted ? "primary" : "error"}
-          sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }}
+          sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1, border: 2, borderColor: "grey.800" }}
           variant={!isVideoMuted ? "text" : "contained"}>
           {!isVideoMuted ? <VideocamIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} /> : <VideocamOff fontSize={window.innerWidth > 768 ? "large" : "medium"} />}
         </Button>
         {/* Screen Share Button */}
         <Box sx={{ display: { xs: "none", md: "block" } }}>
-          <Button onClick={toggleScreenShare} className="border-2 border-gray-700 border-solid" color={isScreenSharing ? "error" : "primary"} sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1 }} variant={isScreenSharing ? "contained" : "text"}>
+          <Button onClick={toggleScreenShare} color={isScreenSharing ? "error" : "primary"} sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1, border: 2, borderColor: "grey.800" }} variant={isScreenSharing ? "contained" : "text"}>
             {isScreenSharing ? <StopScreenShareIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} /> : <PresentToAllIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />}
           </Button>
         </Box>
         {/* Chat Button */}
-        <Button onClick={() => setShowChat(!showChat)} className="border-2 border-gray-700 border-solid" sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1, display: { xs: "none", md: "block" } }}>
+        <Button onClick={() => setShowChat(!showChat)} sx={{ p: { xs: 1.5, md: 2 }, borderRadius: "100rem", aspectRatio: 1, display: { xs: "none", md: "block" }, border: 2, borderColor: "grey.800" }}>
           <ChatIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
         </Button>
         <Button
@@ -147,12 +145,14 @@ export default function BottomControls() {
       <Box>
         <Button
           onClick={handleClick}
-          className="border-2 border-gray-700 border-solid"
           sx={{
+            mr: { xs: 1, md: 3.5 },
             p: { xs: 1.5, md: 2 },
             borderRadius: "100rem",
             aspectRatio: 1,
-            display: { xs: "flex", md: "none" }, // Only show on mobile
+            display: { xs: "flex", md: "none" },
+            border: 2,
+            borderColor: "grey.800",
           }}>
           <MoreVertIcon fontSize={window.innerWidth > 768 ? "large" : "medium"} />
         </Button>

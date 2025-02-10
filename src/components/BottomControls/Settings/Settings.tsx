@@ -49,12 +49,10 @@ export default function Settings({ inMenu = false }: SettingsProps) {
       ) : (
         <Box sx={{ display: { xs: "none", md: "block" } }}>
           <Button
-            sx={{ p: { xs: 1.5, md: 2 }, mr: 3.5, borderRadius: "100%" }}
-            className="border-2 border-gray-700 border-solid"
+            sx={{ p: { xs: 1.5, md: 2 }, mr: 3.5, borderRadius: "100%", border: 2, borderColor: "grey.800" }}
             onClick={() => {
               setOpen(true);
-            }}
-          >
+            }}>
             <SettingsIcon fontSize="large" />
           </Button>
         </Box>
@@ -66,8 +64,7 @@ export default function Settings({ inMenu = false }: SettingsProps) {
           setOpen(false);
         }}
         aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
-      >
+        aria-describedby="modal-modal-description">
         <Paper
           elevation={4}
           sx={{
@@ -81,15 +78,13 @@ export default function Settings({ inMenu = false }: SettingsProps) {
             maxHeight: "40rem",
             p: 0,
             borderRadius: 4,
-          }}
-        >
+          }}>
           <Grid
             container
             sx={{
               height: "100%",
               flexDirection: { xs: "column", md: "row" },
-            }}
-          >
+            }}>
             <Grid
               xs={12}
               md={4}
@@ -98,8 +93,7 @@ export default function Settings({ inMenu = false }: SettingsProps) {
                 borderBottom: { xs: "1px solid #323232", md: "none" },
                 height: { xs: "auto", md: "100%" },
                 pr: 0,
-              }}
-            >
+              }}>
               <Stack spacing={2}>
                 <Typography variant="h4" sx={{ p: 3, pb: 1 }}>
                   Settings
@@ -111,8 +105,8 @@ export default function Settings({ inMenu = false }: SettingsProps) {
                   Video
                 </Item> */}
                 <Tabs orientation="vertical" value={value} onChange={handleChange} aria-label="Vertical tabs">
-                  <Tab label="Audio" id={`vertical-tab-${value}`} aria-controls={`vertical-tabpanel-${value}`} sx={{ backgroundColor: value === 0 ? "#323232" : "transparent", py: "1.5rem", px: "1.5rem"  }}/>
-                  <Tab label="Video" id={`vertical-tab-${value}`} aria-controls={`vertical-tabpanel-${value}`} sx={{ backgroundColor: value === 1 ? "#323232" : "transparent", py: "1.5rem", px: "1.5rem"  }}/>
+                  <Tab label="Audio" id={`vertical-tab-${value}`} aria-controls={`vertical-tabpanel-${value}`} sx={{ backgroundColor: value === 0 ? "#323232" : "transparent", py: "1.5rem", px: "1.5rem" }} />
+                  <Tab label="Video" id={`vertical-tab-${value}`} aria-controls={`vertical-tabpanel-${value}`} sx={{ backgroundColor: value === 1 ? "#323232" : "transparent", py: "1.5rem", px: "1.5rem" }} />
                 </Tabs>
               </Stack>
             </Grid>
@@ -124,8 +118,7 @@ export default function Settings({ inMenu = false }: SettingsProps) {
                     setOpen(false);
                   }}
                   size="small"
-                  variant="text"
-                >
+                  variant="text">
                   <CloseIcon fontSize="small" />
                 </Button>
               </div>

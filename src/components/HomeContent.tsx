@@ -11,9 +11,10 @@ export default function HomeContent() {
   const { setUsername } = useGlobal();
 
   const router = useRouter();
-  const [roomName, setRoomName] = useState(searchParams.get("id") || "");
+  const [roomName, setRoomName] = useState(searchParams?.get("id") || "");
   const [actionText, setActionText] = useState("Create Room");
-  const [name, setName] = useState("");
+  const [name, setName] = useState(searchParams?.get("name") || "");
+  const hasEnded = searchParams?.get("ended") === "true";
 
   const joinRoom = (e: FormEvent) => {
     e.preventDefault();
@@ -51,8 +52,20 @@ export default function HomeContent() {
             fontWeight: "bold",
             fontSize: { xs: "2rem", sm: "3rem", md: "3.75rem" },
           }}>
-          Welcome to GeminiMeetings
+          {hasEnded ? "Call Ended" : "Welcome to GeminiMeetings"}
         </Typography>
+        {hasEnded && (
+          <Typography
+            variant="h6"
+            sx={{
+              textAlign: "center",
+              mt: 2,
+              mb: 4,
+              color: "text.secondary",
+            }}>
+            Would you like to rejoin the call or start a new one?
+          </Typography>
+        )}
         <Box
           component={"form"}
           sx={{
@@ -85,15 +98,29 @@ export default function HomeContent() {
               width: { xs: "100%", sm: "30rem" },
             }}
           />
-          <Button
-            variant="contained"
-            type="submit"
-            size="large"
-            sx={{
-              width: { xs: "100%", sm: "30rem" },
-            }}>
-            <span className="normal-case text-lg">{actionText}</span>
-          </Button>
+          <Box sx={{ display: "flex", gap: 2, width: { xs: "100%", sm: "30rem" } }}>
+            {hasEnded && searchParams?.get("lastId") && (
+              <Button
+                variant="contained"
+                color="info"
+                size="large"
+                sx={{ flex: 1 }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (!name.trim()) {
+                    alert("Please enter your name");
+                    return;
+                  }
+                  setUsername(name.trim());
+                  router.push(`/room/${searchParams?.get("lastId")}`);
+                }}>
+                <span className="normal-case text-lg">Rejoin Last Call</span>
+              </Button>
+            )}
+            <Button variant="contained" type="submit" size="large" sx={{ flex: 1 }}>
+              <span className="normal-case text-lg">{actionText}</span>
+            </Button>
+          </Box>
         </Box>
       </Box>
     </Card>

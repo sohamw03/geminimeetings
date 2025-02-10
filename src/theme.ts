@@ -28,7 +28,7 @@ const theme = createTheme({
       styleOverrides: {
         root: ({ ownerState }) => ({
           ...(ownerState.severity === "info" && {
-            backgroundColor: "#101418",
+            backgroundColor: "#1e1e1e",
           }),
         }),
       },
