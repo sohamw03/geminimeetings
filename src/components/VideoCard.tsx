@@ -1,11 +1,11 @@
 "use client";
 import { Values, useGlobal } from "@/globalContext/GlobalContext";
 import { Fullscreen, FullscreenExit } from "@mui/icons-material";
-import { IconButton, Paper, Typography } from "@mui/material";
+import { CircularProgress, IconButton, Paper, Typography } from "@mui/material";
 import { LegacyRef, useEffect, useRef, useState } from "react";
 
 export default function VideoCard({ mode }: { mode: "user" | "peer" }) {
-  const { userVideoRef, peerVideoRef, isPeerScreenSharing, username, peerUsername }: Values = useGlobal();
+  const { userVideoRef, peerVideoRef, isPeerScreenSharing, username, peerUsername, isWebRTCConnecting }: Values = useGlobal();
   const [isControlsVisible, setIsControlsVisible] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,9 +43,11 @@ export default function VideoCard({ mode }: { mode: "user" | "peer" }) {
       if (!document.fullscreenElement) {
         await containerRef.current.requestFullscreen();
         setIsFullscreen(true);
+        console.log("toggling fullscreen on");
       } else {
         await document.exitFullscreen();
         setIsFullscreen(false);
+        console.log("toggling fullscreen off");
       }
     } catch (err) {
       console.error("Error toggling fullscreen:", err);
@@ -92,9 +94,6 @@ export default function VideoCard({ mode }: { mode: "user" | "peer" }) {
     onMouseLeave: hideControls,
     onMouseMove: showControls,
     onTouchStart: showControls,
-    onTouchEnd: (e: React.TouchEvent) => {
-      e.preventDefault();
-    },
   };
 
   switch (mode) {
@@ -109,6 +108,11 @@ export default function VideoCard({ mode }: { mode: "user" | "peer" }) {
     case "peer":
       return (
         <Paper ref={containerRef} elevation={2} className="rounded-xl cursor-pointer w-[calc(100%-0.5rem)] h-[calc(100%-0.5rem)] flex justify-center items-center relative" {...videoEvents}>
+          {isWebRTCConnecting && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+              <CircularProgress />
+            </div>
+          )}
           <video autoPlay playsInline controls={false} ref={peerVideoRef as LegacyRef<HTMLVideoElement>} className={`aspect-video h-full w-full ${isPeerScreenSharing ? "" : "-scale-x-100"}`} />
           <UsernameOverlay name={peerUsername || "Peer"} />
           <FullscreenButton />

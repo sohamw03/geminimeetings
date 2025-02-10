@@ -37,6 +37,7 @@ export interface Values {
   setUsername: React.Dispatch<React.SetStateAction<string>>;
   peerUsername: string;
   setPeerUsername: React.Dispatch<React.SetStateAction<string>>;
+  isWebRTCConnecting: boolean;
 }
 
 const globalContext = createContext<Values>({} as Values);
@@ -56,6 +57,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
   const [messages, setMessages] = useState<Message[]>([]);
   const [username, setUsername] = useState<string>("");
   const [peerUsername, setPeerUsername] = useState<string>("");
+  const [isWebRTCConnecting, setIsWebRTCConnecting] = useState(false);
 
   const router = useRouter();
   const chatEngineRef = useRef<ChatEngine>();
@@ -251,6 +253,11 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
       // Initialize ChatEngine first
       chatEngineRef.current = new ChatEngine(peer, setMessages);
 
+      peer.on("error", (err) => {
+        console.error("Peer error:", err);
+        leaveRoom();
+      });
+
       peer.on("data", (data) => {
         const message = JSON.parse(data.toString());
         if (message.type === "screenShare") {
@@ -265,6 +272,9 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
       peer.on("stream", (stream) => {
         if (peerVideoRef.current) {
           peerVideoRef.current.srcObject = stream;
+          peerVideoRef.current.onloadeddata = () => {
+            setIsWebRTCConnecting(false);
+          };
         }
       });
 
@@ -274,6 +284,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     socketRef.current.on("ready", () => {
       console.log("Ready event received, hostRef:", hostRef.current);
       if (hostRef.current && userStreamRef.current) {
+        setIsWebRTCConnecting(true);
         console.log("Creating peer as initiator");
         if (peerRef.current) {
           peerRef.current.destroy();
@@ -303,6 +314,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     socketRef.current.on("offer", (offer) => {
       console.log("Received offer, creating peer");
       if (!hostRef.current && userStreamRef.current) {
+        setIsWebRTCConnecting(true);
         if (peerRef.current) {
           peerRef.current.destroy();
         }
@@ -527,6 +539,7 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     setUsername,
     peerUsername,
     setPeerUsername,
+    isWebRTCConnecting,
   };
 
   return <globalContext.Provider value={values}>{children}</globalContext.Provider>;
