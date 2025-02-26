@@ -5,11 +5,15 @@ import { CircularProgress, IconButton, Paper, Typography } from "@mui/material";
 import { LegacyRef, useEffect, useRef, useState } from "react";
 
 export default function VideoCard({ mode }: { mode: "user" | "peer" }) {
-  const { userVideoRef, peerVideoRef, isPeerScreenSharing, username, peerUsername, isWebRTCConnecting }: Values = useGlobal();
+  const { userVideoRef, peerVideoRef, isPeerScreenSharing, username, peerUsername, isWebRTCConnecting, videoDevices, selectedVideoDeviceId }: Values = useGlobal();
   const [isControlsVisible, setIsControlsVisible] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout>();
+  const shouldMirror = videoDevices?.devices
+    .find((device) => device.deviceId === selectedVideoDeviceId)
+    ?.label.toLowerCase()
+    .includes("front") || window.innerWidth > 600;
 
   const showControls = () => {
     setIsControlsVisible(true);
@@ -100,7 +104,7 @@ export default function VideoCard({ mode }: { mode: "user" | "peer" }) {
     case "user":
       return (
         <Paper ref={containerRef} elevation={3} className="fixed bottom-[9.15rem] right-4 md:right-4 rounded-lg cursor-pointer w-[40vw] md:w-[25rem] aspect-video overflow-hidden z-10" {...videoEvents}>
-          <video autoPlay playsInline controls={false} ref={userVideoRef as LegacyRef<HTMLVideoElement>} className="aspect-video w-full h-full -scale-x-100" muted />
+          <video autoPlay playsInline controls={false} ref={userVideoRef as LegacyRef<HTMLVideoElement>} className={`aspect-video w-full h-full ${shouldMirror ? "-scale-x-100" : ""}`} muted />
           <UsernameOverlay name={username || "You"} />
           <FullscreenButton />
         </Paper>
@@ -113,7 +117,7 @@ export default function VideoCard({ mode }: { mode: "user" | "peer" }) {
               <CircularProgress />
             </div>
           )}
-          <video autoPlay playsInline controls={false} ref={peerVideoRef as LegacyRef<HTMLVideoElement>} className={`aspect-video h-full w-full ${isPeerScreenSharing ? "" : "-scale-x-100"}`} />
+          <video autoPlay playsInline controls={false} ref={peerVideoRef as LegacyRef<HTMLVideoElement>} className={`aspect-video h-full w-full`} />
           <UsernameOverlay name={peerUsername || "Peer"} />
           <FullscreenButton />
         </Paper>

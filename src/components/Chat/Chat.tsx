@@ -4,6 +4,18 @@ import { Box, IconButton, Paper, TextField, Typography } from "@mui/material";
 import { useState, useRef, useEffect } from "react";
 import CircularProgress from "@mui/material/CircularProgress";
 
+const isImageFile = (fileName: string | undefined) => {
+  if (!fileName) return false;
+  const imageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg"];
+  const extension = fileName.substring(fileName.lastIndexOf(".")).toLowerCase();
+  return imageExtensions.includes(extension);
+};
+
+const isSingleEmoji = (message: string) => {
+  const emojiRegex = /^(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F)$/u;
+  return emojiRegex.test(message.trim());
+};
+
 export default function Chat({ onClose }: { onClose: () => void }) {
   const { messages, sendMessage, sendFile, peerUsername } = useGlobal();
   const [message, setMessage] = useState("");
@@ -93,22 +105,69 @@ export default function Chat({ onClose }: { onClose: () => void }) {
                 boxShadow: 1,
               }}>
               {msg.type === "file" ? (
-                <a
-                  href={msg.content}
-                  target="_blank"
-                  download={msg.fileName}
+                isImageFile(msg.fileName) ? (
+                  <Box sx={{ width: "100%" }}>
+                    <img
+                      src={msg.content}
+                      alt={msg.fileName || "Image"}
+                      style={{
+                        width: "100%",
+                        height: "auto",
+                        borderRadius: "4px",
+                        display: "block",
+                      }}
+                    />
+                    <a
+                      href={msg.content}
+                      download={msg.fileName}
+                      target="_blank"
+                      style={{
+                        textDecoration: "none",
+                        display: "block",
+                        textAlign: "center",
+                      }}>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: "block",
+                          textAlign: "center",
+                          mt: 0.5,
+                          color: msg.sender === "me" ? "white" : "inherit",
+                          cursor: "pointer",
+                          "&:hover": {
+                            textDecoration: "underline",
+                          },
+                        }}>
+                        {msg.fileName}
+                      </Typography>
+                    </a>
+                  </Box>
+                ) : (
+                  <a
+                    href={msg.content}
+                    target="_blank"
+                    download={msg.fileName}
+                    style={{
+                      overflowWrap: "anywhere",
+                      color: msg.sender === "me" ? "white" : "inherit",
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}>
+                    <AttachFile fontSize="small" /> {msg.fileName}
+                  </a>
+                )
+              ) : (
+                <span
                   style={{
                     overflowWrap: "anywhere",
-                    color: msg.sender === "me" ? "white" : "inherit",
-                    textDecoration: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
+                    fontSize: isSingleEmoji(msg.content) ? "6rem" : "inherit",
+                    display: "block",
+                    textAlign: "center",
                   }}>
-                  <AttachFile fontSize="small" /> {msg.fileName}
-                </a>
-              ) : (
-                <span style={{ overflowWrap: "anywhere" }}>{msg.content}</span>
+                  {msg.content}
+                </span>
               )}
             </Box>
           </Box>

@@ -98,12 +98,6 @@ export default function Settings({ inMenu = false }: SettingsProps) {
                 <Typography variant="h4" sx={{ p: 3, pb: 1 }}>
                   Settings
                 </Typography>
-                {/* <Item onClick={() => { handleChange(0); }} className="transition-all" sx={{ backgroundColor: value === 0 ? "#323232" : "transparent", }} >
-                  Audio
-                </Item>
-                <Item onClick={() => { handleChange(1); }} className="transition-all" sx={{ backgroundColor: value === 1 ? "#323232" : "transparent", }} >
-                  Video
-                </Item> */}
                 <Tabs orientation="vertical" value={value} onChange={handleChange} aria-label="Vertical tabs">
                   <Tab label="Audio" id={`vertical-tab-${value}`} aria-controls={`vertical-tabpanel-${value}`} sx={{ backgroundColor: value === 0 ? "#323232" : "transparent", py: "1.5rem", px: "1.5rem" }} />
                   <Tab label="Video" id={`vertical-tab-${value}`} aria-controls={`vertical-tabpanel-${value}`} sx={{ backgroundColor: value === 1 ? "#323232" : "transparent", py: "1.5rem", px: "1.5rem" }} />
