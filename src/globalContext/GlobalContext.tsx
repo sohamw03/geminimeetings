@@ -201,8 +201,6 @@ export function GlobalContextProvider({ children }: { children: React.ReactNode 
     };
   }, []);
 
-  useSocket();
-
   const initSocket = (localRoomName: string) => {
     console.log("func: Initiating socket connection");
     setRoomName(localRoomName);
