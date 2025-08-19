@@ -1,15 +1,17 @@
 "use client";
-import { Avatar, Menu, MenuItem, Tooltip, IconButton, AppBar, Box, Toolbar, Typography, Button } from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
+import { Tooltip, AppBar, Box, Toolbar, Typography, Button, useMediaQuery } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import CircleIcon from "@mui/icons-material/Circle";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 
-const settings = ["Profile", "Account", "Dashboard", "Logout"];
+// Profile/settings menu removed per request
 
 export default function Navbar() {
-  const [anchorElUser, setAnchorElUser] = useState(null);
   const [dateDisplay, setDateDisplay] = useState("");
+  const [timeShort, setTimeShort] = useState("");
+  const [dateShort, setDateShort] = useState("");
   const [isServerAlive, setIsServerAlive] = useState(false);
   const keepAliveDebounce = useRef<NodeJS.Timeout>();
   const [statusText, setStatusText] = useState<string>("");
@@ -66,13 +68,7 @@ export default function Navbar() {
     }
   };
 
-  const handleOpenUserMenu = (event: any) => {
-    setAnchorElUser(event.currentTarget);
-  };
-
-  const handleCloseUserMenu = () => {
-    setAnchorElUser(null);
-  };
+  // Removed user menu handlers
 
   useEffect(() => {
     const setDate = () => {
@@ -86,6 +82,9 @@ export default function Navbar() {
         const day = currentDate.toLocaleString("en-US", { weekday: "short" });
         const month = currentDate.toLocaleString("en-US", { month: "short" });
         const date = currentDate.getDate();
+  // Short (time only) for compact mobile UI
+  setTimeShort(`${formattedHours}:${formattedMinutes} ${ampm}`);
+  setDateShort(`${day}, ${month} ${date}`);
         return `${formattedHours}:${formattedMinutes} ${ampm} • ${day}, ${month} ${date}`;
       });
     };
@@ -108,16 +107,61 @@ export default function Navbar() {
   }, []);
 
   return (
-    <Box sx={{ flexGrow: 1, position: "fixed", top: 0, left: 0, right: 0 }}>
+    <ResponsiveNavbarContent
+      isServerAlive={isServerAlive}
+      dateDisplay={dateDisplay}
+      timeShort={timeShort}
+      dateShort={dateShort}
+      showStatus={showStatus}
+      statusText={statusText}
+      handleKeepAlive={handleKeepAlive}
+    />
+  );
+}
+
+// Extracted presentational component for easier responsive handling
+function ResponsiveNavbarContent({
+  isServerAlive,
+  dateDisplay,
+  timeShort,
+  dateShort,
+  showStatus,
+  statusText,
+  handleKeepAlive,
+}: {
+  isServerAlive: boolean;
+  dateDisplay: string;
+  timeShort: string;
+  dateShort: string;
+  showStatus: boolean;
+  statusText: string;
+  handleKeepAlive: (manual?: boolean) => void;
+}) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  return (
+    <Box sx={{ flexGrow: 1, position: "fixed", top: 0, left: 0, right: 0, zIndex: 1100 }}>
       <AppBar position="static">
-        <Toolbar>
-          <IconButton size="large" edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h5" component="div" sx={{ flexGrow: 1, fontWeight: "bold" }}>
+        <Toolbar
+          disableGutters
+          sx={{
+            px: 2,
+            py: 0.5,
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            minHeight: { xs: 56, sm: 64 },
+          }}
+        >
+          <Typography
+            variant="h5"
+            component="div"
+            sx={{ flexGrow: 1, fontWeight: "bold", mr: 1, whiteSpace: 'nowrap' }}
+          >
             <Link href={"/"}>GeminiMeetings</Link>
           </Typography>
-          <Box sx={{ flexGrow: 0, display: "flex", alignItems: "center" }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
             {/* Server status indicator with animated expandable Button (ripple retained) */}
             <Button
               onClick={() => handleKeepAlive(true)}
@@ -127,18 +171,18 @@ export default function Navbar() {
                 position: "relative",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: showStatus && statusText ? "flex-start" : "center",
-                gap: showStatus && statusText ? 1 : 0,
-                minWidth: 40,
-                px: showStatus && statusText ? 1.25 : 0.5,
-                pr: showStatus && statusText ? 1.5 : 0.5,
-                height: 40,
+                justifyContent: showStatus && statusText && !isMobile ? "flex-start" : "center",
+                gap: showStatus && statusText && !isMobile ? 1 : 0,
+                minWidth: isMobile ? 36 : 40,
+                px: showStatus && statusText && !isMobile ? 1.25 : 0.75,
+                pr: showStatus && statusText && !isMobile ? 1.5 : 0.75,
+                height: 38,
                 overflow: "hidden",
                 borderRadius: "2rem",
                 transition: "max-width 0.35s ease, background-color 0.35s ease, padding 0.35s ease, opacity 0.3s ease",
-                maxWidth: showStatus && statusText ? 260 : 44,
+                maxWidth: showStatus && statusText && !isMobile ? 220 : 46,
                 width: "auto",
-                backgroundColor: (theme) => (showStatus && statusText ? theme.palette.action.hover : "transparent"),
+                backgroundColor: (theme) => (showStatus && statusText && !isMobile ? theme.palette.action.hover : "transparent"),
                 "&:hover": {
                   backgroundColor: (theme) => theme.palette.action.hover,
                 },
@@ -146,7 +190,7 @@ export default function Navbar() {
               aria-live="polite"
               aria-label={statusText ? `Server status: ${statusText}` : undefined}>
               <CircleIcon color={isServerAlive ? "success" : "error"} sx={{ flexShrink: 0 }} />
-              {showStatus && statusText && (
+              {showStatus && statusText && !isMobile && (
                 <Typography
                   variant="caption"
                   sx={{
@@ -165,37 +209,24 @@ export default function Navbar() {
                 </Typography>
               )}
             </Button>
+            {/* Date / Time - adapt for mobile */}
+            {isMobile ? (
+              <Tooltip title={dateDisplay} placement="bottom" arrow>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, px: 0.5 }}>
+                  <AccessTimeIcon fontSize="small" />
+                  <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+                    <Typography variant="body2" sx={{ lineHeight: 1, fontWeight: 500 }} noWrap>{timeShort}</Typography>
+                    <Typography variant="caption" sx={{ lineHeight: 1, opacity: 0.85 }} noWrap>{dateShort}</Typography>
+                  </Box>
+                </Box>
+              </Tooltip>
+            ) : (
+              <Typography variant="subtitle1" component="div" sx={{ lineHeight: 1, whiteSpace: "nowrap", px: 1 }}>
+                {dateDisplay}
+              </Typography>
+            )}
 
-            <Typography variant="subtitle1" component="div" sx={{ flexGrow: 1, px: 2, lineHeight: 1 }}>
-              {dateDisplay}
-            </Typography>
-
-            <Tooltip title="Open settings">
-              <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                <Avatar alt="" src="" />
-              </IconButton>
-            </Tooltip>
-            <Menu
-              sx={{ mt: "45px" }}
-              id="menu-appbar"
-              anchorEl={anchorElUser}
-              anchorOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
-              open={Boolean(anchorElUser)}
-              onClose={handleCloseUserMenu}>
-              {settings.map((setting) => (
-                <MenuItem key={setting} onClick={handleCloseUserMenu}>
-                  <Typography textAlign="center">{setting}</Typography>
-                </MenuItem>
-              ))}
-            </Menu>
+            {/* Profile button removed intentionally */}
           </Box>
         </Toolbar>
       </AppBar>
