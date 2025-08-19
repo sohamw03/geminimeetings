@@ -43,14 +43,14 @@ export class ChatEngine {
   private getOptimalChunkSize(): number {
     // Larger chunks improve throughput; keep mobile somewhat smaller
     if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-      return 24 * 1024; // 24KB mobile
+      return 64 * 1024; // 24KB mobile
     }
     return 64 * 1024; // 64KB desktop
   }
 
   private getOptimalConcurrentChunks(): number {
     if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-      return 2; // mobile
+      return 4; // mobile
     }
     return 4; // desktop
   }
