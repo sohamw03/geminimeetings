@@ -79,6 +79,8 @@ export default function HomeContent() {
           onSubmit={joinRoom}>
           <TextField
             required
+            focused
+            autoFocus
             onChange={(e) => setName(e.target.value)}
             value={name}
             label="Enter your name"
