@@ -142,7 +142,12 @@ function ResponsiveNavbarContent({
 
   return (
     <Box sx={{ flexGrow: 1, position: "fixed", top: 0, left: 0, right: 0, zIndex: 1100 }}>
-      <AppBar position="static">
+      <AppBar
+        position="static"
+        elevation={0}
+        color="transparent"
+        sx={{ background: "transparent", boxShadow: "none" }}
+      >
         <Toolbar
           disableGutters
           sx={{

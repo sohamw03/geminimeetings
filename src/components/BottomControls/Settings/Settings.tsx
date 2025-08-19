@@ -1,8 +1,7 @@
 import { Values, useGlobal } from "@/globalContext/GlobalContext";
 import CloseIcon from "@mui/icons-material/Close";
 import SettingsIcon from "@mui/icons-material/Settings";
-import { Box, Button, Modal, Paper, Stack, Tab, Tabs, Typography, styled } from "@mui/material";
-import Grid from "@mui/material/Unstable_Grid2/Grid2";
+import { Box, Button, Modal, Paper, Tab, Tabs, Typography, useMediaQuery, useTheme } from "@mui/material";
 import { useState } from "react";
 import AudioSettings from "./AudioSettings";
 import VideoSettings from "./VideoSettings";
@@ -18,25 +17,14 @@ export default function Settings({ inMenu = false }: SettingsProps) {
   const { open, setOpen }: Values = useGlobal();
   // Local State
   const [value, setValue] = useState(0);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
   };
 
-  const Item = styled(Button)(({ theme }) => ({
-    backgroundColor: "#323232",
-    padding: theme.spacing(2),
-    borderStartStartRadius: 0,
-    borderEndStartRadius: 0,
-    borderStartEndRadius: 32,
-    borderEndEndRadius: 32,
-    textAlign: "left",
-    justifyContent: "flex-start",
-    paddingLeft: theme.spacing(4),
-    color: theme.palette.text.secondary,
-    textTransform: "none",
-    fontSize: "1rem",
-  }));
+  // Item styled button removed (unused in new layout)
 
   return (
     <>
@@ -52,7 +40,8 @@ export default function Settings({ inMenu = false }: SettingsProps) {
             sx={{ p: { xs: 1.5, md: 2 }, mr: 3.5, borderRadius: "100%", border: 2, borderColor: "grey.800" }}
             onClick={() => {
               setOpen(true);
-            }}>
+            }}
+          >
             <SettingsIcon fontSize="large" />
           </Button>
         </Box>
@@ -63,79 +52,111 @@ export default function Settings({ inMenu = false }: SettingsProps) {
         onClose={() => {
           setOpen(false);
         }}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description">
+        aria-labelledby="settings-modal-title"
+        aria-describedby="settings-modal-description"
+      >
         <Paper
           elevation={4}
           sx={{
             position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: "95vw",
-            maxWidth: "60rem",
-            height: { xs: "90vh", md: "70vh" },
-            maxHeight: "40rem",
+            top: isMobile ? 0 : "50%",
+            left: isMobile ? 0 : "50%",
+            transform: isMobile ? "none" : "translate(-50%, -50%)",
+            width: isMobile ? "100vw" : "95vw",
+            maxWidth: isMobile ? "100vw" : "60rem",
+            height: isMobile ? "100vh" : "70vh",
+            maxHeight: isMobile ? "100vh" : "40rem",
             p: 0,
-            borderRadius: 4,
-          }}>
-          <Grid
-            container
-            sx={{
-              height: "100%",
-              flexDirection: { xs: "column", md: "row" },
-            }}>
-            <Grid
-              xs={12}
-              md={4}
+            borderRadius: isMobile ? 0 : 4,
+            display: "flex",
+            flexDirection: "column",
+            bgcolor: "background.paper",
+          }}
+        >
+          {/* Header */}
+            <Box
               sx={{
-                borderRight: { xs: "none", md: "1px solid #323232" },
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                px: 3,
+                pt: 3,
+                pb: 1,
                 borderBottom: { xs: "1px solid #323232", md: "none" },
-                height: { xs: "auto", md: "100%" },
-                pr: 0,
-              }}>
-              <Stack spacing={2}>
-                <Typography variant="h4" sx={{ p: 3, pb: 1 }}>
-                  Settings
-                </Typography>
-                <Tabs orientation="vertical" value={value} onChange={handleChange} aria-label="Vertical tabs">
-                  <Tab label="Audio" id={`vertical-tab-${value}`} aria-controls={`vertical-tabpanel-${value}`} sx={{ backgroundColor: value === 0 ? "#323232" : "transparent", py: "1.5rem", px: "1.5rem" }} />
-                  <Tab label="Video" id={`vertical-tab-${value}`} aria-controls={`vertical-tabpanel-${value}`} sx={{ backgroundColor: value === 1 ? "#323232" : "transparent", py: "1.5rem", px: "1.5rem" }} />
-                </Tabs>
-              </Stack>
-            </Grid>
-            <Box sx={{ display: "flex", flex: 1, flexDirection: "column" }}>
-              <div className="w-full flex flex-row justify-end h-16">
-                <Button
-                  sx={{ borderRadius: "100rem" }}
-                  onClick={() => {
-                    setOpen(false);
-                  }}
-                  size="small"
-                  variant="text">
-                  <CloseIcon fontSize="small" />
-                </Button>
-              </div>
-              {/* Panel */}
-              {/* <div role="tabpanel" id={`simple-tabpanel-${value}`} aria-labelledby={`simple-tab-${value}`}>
-                <Box>{selectedPanel[value]}</Box>
-              </div> */}
-              <div role="tabpanel" hidden={value !== 0} id={`vertical-tabpanel-${0}`} aria-labelledby={`vertical-tab-${0}`}>
-                {value === 0 && (
-                  <Box sx={{ p: 3 }}>
-                    <Box>{selectedPanel[value]}</Box>
-                  </Box>
-                )}
-              </div>
-              <div role="tabpanel" hidden={value !== 1} id={`vertical-tabpanel-${1}`} aria-labelledby={`vertical-tab-${1}`}>
-                {value === 1 && (
-                  <Box sx={{ p: 3 }}>
-                    <Box>{selectedPanel[value]}</Box>
-                  </Box>
-                )}
-              </div>
+              }}
+            >
+              <Typography id="settings-modal-title" variant={isMobile ? "h5" : "h4"}>Settings</Typography>
+              <Button
+                sx={{ borderRadius: "100rem", minWidth: 0, p: 1.2 }}
+                onClick={() => setOpen(false)}
+                size="small"
+                variant="text"
+                aria-label="Close settings"
+              >
+                <CloseIcon fontSize="small" />
+              </Button>
             </Box>
-          </Grid>
+            <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
+              {!isMobile && (
+                <Box
+                  sx={{
+                    width: { md: "30%" },
+                    maxWidth: 280,
+                    borderRight: "1px solid #323232",
+                    py: 2,
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <Tabs
+                    orientation="vertical"
+                    variant="scrollable"
+                    value={value}
+                    onChange={handleChange}
+                    aria-label="Settings tabs"
+                    sx={{ px: 2 }}
+                  >
+                    <Tab label="Audio" id={`settings-tab-${0}`} aria-controls={`settings-tabpanel-${0}`} sx={{ alignItems: 'flex-start' }} />
+                    <Tab label="Video" id={`settings-tab-${1}`} aria-controls={`settings-tabpanel-${1}`} sx={{ alignItems: 'flex-start' }} />
+                  </Tabs>
+                </Box>
+              )}
+              <Box sx={{ flex: 1, display: "flex", flexDirection: "column", height: "100%" }}>
+                {isMobile && (
+                  <Tabs
+                    orientation="horizontal"
+                    variant="fullWidth"
+                    value={value}
+                    onChange={handleChange}
+                    aria-label="Settings tabs"
+                    sx={{ borderBottom: "1px solid #323232" }}
+                  >
+                    <Tab label="Audio" id={`settings-tab-${0}`} aria-controls={`settings-tabpanel-${0}`} />
+                    <Tab label="Video" id={`settings-tab-${1}`} aria-controls={`settings-tabpanel-${1}`} />
+                  </Tabs>
+                )}
+                <Box sx={{ flex: 1, overflowY: 'auto', p: 3 }}>
+                  <div
+                    role="tabpanel"
+                    hidden={value !== 0}
+                    id={`settings-tabpanel-${0}`}
+                    aria-labelledby={`settings-tab-${0}`}
+                    style={{ height: '100%' }}
+                  >
+                    {value === 0 && <Box>{selectedPanel[0]}</Box>}
+                  </div>
+                  <div
+                    role="tabpanel"
+                    hidden={value !== 1}
+                    id={`settings-tabpanel-${1}`}
+                    aria-labelledby={`settings-tab-${1}`}
+                    style={{ height: '100%' }}
+                  >
+                    {value === 1 && <Box>{selectedPanel[1]}</Box>}
+                  </div>
+                </Box>
+              </Box>
+            </Box>
         </Paper>
       </Modal>
     </>
